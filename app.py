@@ -236,21 +236,6 @@ def load_model():
         os.path.join(models_dir, 'feature_names_no_gender.pkl')
     )
     return model, feature_names
-```
-
-The only change is removing `'..'` — the original code was looking one folder up for the models folder, but on Streamlit Cloud everything sits in the same root directory.
-
----
-
-**Also check on GitHub** that your repo structure looks like this:
-```
-loan-default-risk-predictor/
-├── app.py
-├── requirements.txt
-├── README.md
-└── models/
-    ├── xgb_model_no_gender.pkl
-    └── feature_names_no_gender.pkl
 
 model, feature_names = load_model()
 
@@ -375,7 +360,7 @@ with st.sidebar:
     if "Loan Officer" in view_mode:
         st.markdown("""
         This tool uses a machine learning model trained on
-        **307,511 real loan applications** to predict the
+        **1,600,000 real Nigerian loan records** to predict the
         probability that a borrower will default.
         """)
         st.markdown("---")
@@ -393,7 +378,7 @@ with st.sidebar:
         - **AUC-ROC:** 0.7664
         - **Recall:** 65.3% of defaults caught
         - **Algorithm:** XGBoost
-        - **Training records:** 307,511
+        - **Training records:** 1,600,000
         - **Gender-neutral:** Yes ✅
         - **CBN compliant:** Fair lending ready
         - **Income range:** No upper limit
@@ -466,11 +451,11 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("""
     <div style='font-size:12px'>
-    Built by <strong>Abiola Lawal</strong><br>
-    Data Scientist | Credit Risk & Fintech ML<br>
-    <a href='https://linkedin.com/in/abiola-lawal-abdulrafiu'
+    Built by <strong>Nkpo-ikana Udom</strong><br>
+    Operations & Strategy | Fintech & Credit Risk<br>
+    <a href='https://www.linkedin.com/in/nkpo-ikana-udom-479ba91a9/'
     target='_blank'>LinkedIn</a> ·
-    <a href='https://github.com/abiolalawal14'
+    <a href='https://github.com/stephenudom'
     target='_blank'>GitHub</a>
     </div>
     """, unsafe_allow_html=True)
@@ -1313,11 +1298,11 @@ else:
 # ─────────────────────────────────────────
 st.markdown("""
 <div class="footer">
-    Built by <strong>Abiola Lawal</strong> —
-    Data Scientist | Credit Risk & Fintech ML |
-    <a href='https://linkedin.com/in/abiola-lawal-abdulrafiu' target='_blank'>LinkedIn</a> ·
-    <a href='https://github.com/abiolalawal14' target='_blank'>GitHub</a><br>
-    Trained on 307,511 loan applications · XGBoost · SHAP Explainability ·
+    Built by <strong>Nkpo-ikana Udom</strong> —
+    Operations & Strategy | Fintech & Credit Risk |
+    <a href='https://www.linkedin.com/in/nkpo-ikana-udom-479ba91a9/' target='_blank'>LinkedIn</a> ·
+    <a href='https://github.com/stephenudom' target='_blank'>GitHub</a><br>
+    Trained on 1,600,000 Nigerian loan records · XGBoost · SHAP Explainability ·
     Gender-Neutral · CBN Fair Lending Compliant · Full Nigerian Market Range ·
     Adjustable Risk Thresholds · BVN-Ready · Dual Interface
 </div>
