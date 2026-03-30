@@ -228,7 +228,7 @@ st.markdown("""
 @st.cache_resource
 def load_model():
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    models_dir = os.path.join(base_dir, '..', 'models')
+    models_dir = os.path.join(base_dir, 'models')
     model = joblib.load(
         os.path.join(models_dir, 'xgb_model_no_gender.pkl')
     )
@@ -236,6 +236,21 @@ def load_model():
         os.path.join(models_dir, 'feature_names_no_gender.pkl')
     )
     return model, feature_names
+```
+
+The only change is removing `'..'` — the original code was looking one folder up for the models folder, but on Streamlit Cloud everything sits in the same root directory.
+
+---
+
+**Also check on GitHub** that your repo structure looks like this:
+```
+loan-default-risk-predictor/
+├── app.py
+├── requirements.txt
+├── README.md
+└── models/
+    ├── xgb_model_no_gender.pkl
+    └── feature_names_no_gender.pkl
 
 model, feature_names = load_model()
 
