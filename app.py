@@ -663,6 +663,11 @@ def validate_bvn(v: str):
 init_state()
 
 # ---------------------------
+# Step names (shared)
+# ---------------------------
+step_names = ["Personal Details", "Employment & Income", "Loan Request", "Documents", "BVN & Review"]
+
+# ---------------------------
 # Layout: sidebar + main
 # ---------------------------
 cols = st.columns([0.32, 1.0])
@@ -687,10 +692,9 @@ with cols[0]:
   tagline = contacts.get('address') or 'Your growth journey begins with a single application. We make it simple.'
   st.markdown(f"<div class=\"sidebar-tagline\">{tagline}</div>", unsafe_allow_html=True)
 
-    step_names = ["Personal Details", "Employment & Income", "Loan Request", "Documents", "BVN & Review"]
-    for i, name in enumerate(step_names, start=1):
-        if st.button(f"{i}. {name}", key=f"step_btn_{i}"):
-            set_step(i)
+  for i, name in enumerate(step_names, start=1):
+      if st.button(f"{i}. {name}", key=f"step_btn_{i}"):
+          set_step(i)
 
   st.markdown('---')
   st.markdown('<div class="help-line">Need assistance?</div>', unsafe_allow_html=True)
