@@ -1,11 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Loan Application — Joyful Smile Nigeria Limited</title>
+import streamlit as st
+import numpy as np
+import os
+import io
+import re
+
+# Optional PDF rendering dependency
+try:
+  import fitz  # PyMuPDF
+except Exception:
+  fitz = None
+
+st.set_page_config(page_title="Loan Application — Joyful Smile Nigeria Limited",
+                   layout="wide", page_icon="🏦")
+
+# ---------------------------
+# Inject exact fonts + CSS from provided HTML
+# ---------------------------
+st.markdown("""
+<!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&family=Libre+Baskerville:ital@1&display=swap" rel="stylesheet">
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -517,902 +532,408 @@ input::placeholder,textarea::placeholder{color:var(--text-muted);font-size:13px}
   .docs-grid{grid-template-columns:1fr}
 }
 </style>
-</head>
-<body>
+""", unsafe_allow_html=True)
 
-<div class="app-shell">
+# ---------------------------
+# Helper functions & session state
+# ---------------------------
 
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar">
-    <div class="logo-area">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm0 14c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-2-6.5l1.5 1.5 3-3"/></svg>
-      </div>
-      <div class="logo-brand">Joyful Smile<br>Nigeria Limited</div>
-      <div class="logo-sub">Financial Services</div>
-    </div>
-
-    <p class="sidebar-tagline">Your growth journey begins with a single application. We make it simple.</p>
-
-    <nav class="steps-nav">
-      <div class="step-item active" onclick="goTo(1)">
-        <div class="step-num">1</div>
-        <div>
-          <div class="step-title">Personal Details</div>
-          <div class="step-label">Identity & contact</div>
-        </div>
-      </div>
-      <div class="step-item" onclick="goTo(2)">
-        <div class="step-num">2</div>
-        <div>
-          <div class="step-title">Employment & Income</div>
-          <div class="step-label">Work & earnings</div>
-        </div>
-      </div>
-      <div class="step-item" onclick="goTo(3)">
-        <div class="step-num">3</div>
-        <div>
-          <div class="step-title">Loan Request</div>
-          <div class="step-label">Amount & purpose</div>
-        </div>
-      </div>
-      <div class="step-item" onclick="goTo(4)">
-        <div class="step-num">4</div>
-        <div>
-          <div class="step-title">Documents</div>
-          <div class="step-label">Supporting files</div>
-        </div>
-      </div>
-      <div class="step-item" onclick="goTo(5)">
-        <div class="step-num">5</div>
-        <div>
-          <div class="step-title">BVN & Review</div>
-          <div class="step-label">Verify & submit</div>
-        </div>
-      </div>
-    </nav>
-
-    <div class="sidebar-help">
-      <div class="help-line">Need assistance?</div>
-      <div class="help-contact">07010057527</div>
-      <div class="help-contact" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">joyfulsmilesnigerialimited@gmail.com</div>
-    </div>
-  </aside>
-
-  <!-- ── MAIN ── -->
-  <div class="main-content">
-
-    <!-- Top bar -->
-    <div class="top-bar">
-      <div class="top-bar-left">Loan Application &nbsp;/&nbsp; <strong id="top-step-name">Personal Details</strong></div>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar-fill" id="progress-fill" style="width:20%"></div>
-      </div>
-      <div class="progress-label" id="progress-label">Step 1 of 5</div>
-    </div>
-
-    <!-- Form area -->
-    <div class="form-area">
-
-      <!-- ══ STEP 1: PERSONAL DETAILS ══ -->
-      <div class="step-content active" id="step-1">
-        <div class="section-eyebrow">Step 1 of 5</div>
-        <h1 class="section-title">Personal Details</h1>
-        <p class="section-desc">Provide your personal information exactly as it appears on your government-issued ID.</p>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>First Name <span class="req">*</span></label>
-            <input type="text" id="first-name" placeholder="e.g. Chukwuemeka">
-          </div>
-          <div>
-            <label>Last Name <span class="req">*</span></label>
-            <input type="text" id="last-name" placeholder="e.g. Okonkwo">
-          </div>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Middle Name</label>
-            <input type="text" id="middle-name" placeholder="Optional">
-          </div>
-          <div>
-            <label>Date of Birth <span class="req">*</span></label>
-            <input type="text" id="dob" placeholder="DD / MM / YYYY">
-          </div>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Phone Number <span class="req">*</span></label>
-            <input type="tel" id="phone" placeholder="e.g. 08012345678">
-          </div>
-          <div>
-            <label>Email Address</label>
-            <input type="email" id="email" placeholder="e.g. name@email.com">
-          </div>
-        </div>
-
-        <div class="field-row cols-3">
-          <div>
-            <label>Marital Status <span class="req">*</span></label>
-            <select id="marital">
-              <option value="">Select</option>
-              <option>Single</option>
-              <option>Married</option>
-              <option>Divorced</option>
-              <option>Widowed</option>
-            </select>
-          </div>
-          <div>
-            <label>No. of Dependants</label>
-            <input type="number" id="dependants" placeholder="0" min="0" max="20">
-          </div>
-          <div>
-            <label>Total Family Members</label>
-            <input type="number" id="family" placeholder="1" min="1">
-          </div>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Highest Education Level <span class="req">*</span></label>
-            <select id="education">
-              <option value="">Select level</option>
-              <option>SSCE / O'Level</option>
-              <option>OND / NCE</option>
-              <option>HND / B.Sc</option>
-              <option>Postgraduate (M.Sc / MBA)</option>
-              <option>PhD / Doctorate</option>
-              <option>Professional Certification</option>
-              <option>No formal education</option>
-            </select>
-          </div>
-          <div>
-            <label>Residential State <span class="req">*</span></label>
-            <select id="state">
-              <option value="">Select state</option>
-              <option>Abia</option><option>Adamawa</option><option>Akwa Ibom</option>
-              <option>Anambra</option><option>Bauchi</option><option>Bayelsa</option>
-              <option>Benue</option><option>Borno</option><option>Cross River</option>
-              <option>Delta</option><option>Ebonyi</option><option>Edo</option>
-              <option>Ekiti</option><option>Enugu</option><option>FCT — Abuja</option>
-              <option>Gombe</option><option>Imo</option><option>Jigawa</option>
-              <option>Kaduna</option><option>Kano</option><option>Katsina</option>
-              <option>Kebbi</option><option>Kogi</option><option>Kwara</option>
-              <option>Lagos</option><option>Nasarawa</option><option>Niger</option>
-              <option>Ogun</option><option>Ondo</option><option>Osun</option>
-              <option>Oyo</option><option>Plateau</option><option>Rivers</option>
-              <option>Sokoto</option><option>Taraba</option><option>Yobe</option>
-              <option>Zamfara</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label>Residential Address <span class="req">*</span></label>
-          <textarea id="address" placeholder="House number, street, town, local government area"></textarea>
-        </div>
-
-        <div class="form-nav">
-          <span></span>
-          <button class="btn btn-primary" onclick="nextStep()">
-            Continue
-            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- ══ STEP 2: EMPLOYMENT & INCOME ══ -->
-      <div class="step-content" id="step-2">
-        <div class="section-eyebrow">Step 2 of 5</div>
-        <h1 class="section-title">Employment & Income</h1>
-        <p class="section-desc">Tell us about your work and how you earn. This helps us determine the right loan size for you.</p>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Employment Status <span class="req">*</span></label>
-            <select id="emp-status" onchange="toggleEmpFields()">
-              <option value="">Select</option>
-              <option>Employed (Full-time)</option>
-              <option>Employed (Part-time)</option>
-              <option>Self-Employed / Business Owner</option>
-              <option>Civil Servant / Government Employee</option>
-              <option>Contractor / Freelancer</option>
-              <option>Retired</option>
-              <option>Unemployed</option>
-            </select>
-          </div>
-          <div>
-            <label>Employment Sector <span class="req">*</span></label>
-            <select id="emp-sector">
-              <option value="">Select sector</option>
-              <option>Banking & Finance</option>
-              <option>Government / Civil Service</option>
-              <option>Healthcare & Pharmaceuticals</option>
-              <option>Education & Training</option>
-              <option>Technology & Telecoms</option>
-              <option>Trade & Commerce</option>
-              <option>Agriculture & Agribusiness</option>
-              <option>Transport & Logistics</option>
-              <option>Construction & Real Estate</option>
-              <option>Oil & Gas</option>
-              <option>Manufacturing</option>
-              <option>Creative & Media</option>
-              <option>Other</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="field-row cols-2" id="employer-fields">
-          <div>
-            <label>Employer / Business Name <span class="req">*</span></label>
-            <input type="text" id="employer" placeholder="e.g. Lagos State Government">
-          </div>
-          <div>
-            <label>Years in Current Role / Business <span class="req">*</span></label>
-            <select id="emp-years">
-              <option value="">Select</option>
-              <option>Less than 6 months</option>
-              <option>6 months to 1 year</option>
-              <option>1 to 2 years</option>
-              <option>2 to 5 years</option>
-              <option>5 to 10 years</option>
-              <option>Over 10 years</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Income Type <span class="req">*</span></label>
-            <select id="income-type">
-              <option value="">Select</option>
-              <option>Fixed Monthly Salary</option>
-              <option>Business Revenue (Regular)</option>
-              <option>Commission-Based</option>
-              <option>Irregular / Seasonal</option>
-              <option>Pension</option>
-              <option>Rental Income</option>
-              <option>Multiple Sources</option>
-            </select>
-          </div>
-          <div>
-            <label>Pay Frequency <span class="req">*</span></label>
-            <select id="pay-freq">
-              <option value="">Select</option>
-              <option>Monthly</option>
-              <option>Bi-weekly</option>
-              <option>Weekly</option>
-              <option>Daily</option>
-              <option>Project-based</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Monthly Net Income (₦) <span class="req">*</span></label>
-            <div class="input-prefix-wrap">
-              <span class="input-prefix">₦</span>
-              <input type="number" id="monthly-income" placeholder="0.00" min="0">
-            </div>
-            <div class="input-hint">Take-home income after tax and deductions</div>
-          </div>
-          <div>
-            <label>Other Monthly Income (₦)</label>
-            <div class="input-prefix-wrap">
-              <span class="input-prefix">₦</span>
-              <input type="number" id="other-income" placeholder="0.00" min="0">
-            </div>
-            <div class="input-hint">Rental, commission, business, etc.</div>
-          </div>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Total Monthly Obligations (₦)</label>
-            <div class="input-prefix-wrap">
-              <span class="input-prefix">₦</span>
-              <input type="number" id="obligations" placeholder="0.00" min="0">
-            </div>
-            <div class="input-hint">Existing loan repayments, rent, etc.</div>
-          </div>
-          <div>
-            <label>Number of Active Loans</label>
-            <input type="number" id="active-loans" placeholder="0" min="0">
-            <div class="input-hint">Across all lenders including this application</div>
-          </div>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Previous Loan Default History</label>
-            <select id="default-history">
-              <option value="Never">Never defaulted</option>
-              <option value="5yr">Defaulted — over 5 years ago</option>
-              <option value="2-5yr">Defaulted — 2 to 5 years ago</option>
-              <option value="recent">Defaulted — within the last 2 years</option>
-            </select>
-          </div>
-          <div>
-            <label>Work / Office Phone Number</label>
-            <input type="tel" id="work-phone" placeholder="e.g. 0123456789">
-          </div>
-        </div>
-
-        <div class="form-nav">
-          <button class="btn btn-secondary" onclick="prevStep()">
-            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Back
-          </button>
-          <button class="btn btn-primary" onclick="nextStep()">
-            Continue
-            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- ══ STEP 3: LOAN REQUEST ══ -->
-      <div class="step-content" id="step-3">
-        <div class="section-eyebrow">Step 3 of 5</div>
-        <h1 class="section-title">Loan Request</h1>
-        <p class="section-desc">Tell us how much you need, what it's for, and how you plan to repay.</p>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Loan Amount Requested (₦) <span class="req">*</span></label>
-            <div class="input-prefix-wrap">
-              <span class="input-prefix">₦</span>
-              <input type="number" id="loan-amount" placeholder="0.00" min="10000" oninput="updateDSR()">
-            </div>
-          </div>
-          <div>
-            <label>Loan Tenure <span class="req">*</span></label>
-            <select id="loan-tenure" onchange="updateDSR()">
-              <option value="">Select</option>
-              <option value="3">3 months</option>
-              <option value="6">6 months</option>
-              <option value="9">9 months</option>
-              <option value="12">12 months</option>
-              <option value="18">18 months</option>
-              <option value="24">24 months</option>
-              <option value="36">36 months</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Purpose of Loan <span class="req">*</span></label>
-            <select id="loan-purpose">
-              <option value="">Select purpose</option>
-              <option>Working Capital / Business Expansion</option>
-              <option>Equipment / Machinery Purchase</option>
-              <option>Stock / Inventory Purchase</option>
-              <option>School Fees / Education</option>
-              <option>Medical / Healthcare</option>
-              <option>Home Renovation</option>
-              <option>Vehicle Purchase</option>
-              <option>Personal / Emergency</option>
-              <option>Salary Advance</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div>
-            <label>Loan Type <span class="req">*</span></label>
-            <select id="loan-type">
-              <option>Cash Loan</option>
-              <option>Revolving Credit</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- DSR indicator -->
-        <div id="dsr-card" style="display:none;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:24px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase">Estimated Repayment Overview</div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-            <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px">
-              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Monthly Repayment</div>
-              <div style="font-size:18px;font-weight:600;color:var(--text-primary)" id="dsr-monthly">—</div>
-            </div>
-            <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px">
-              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Total Repayable</div>
-              <div style="font-size:18px;font-weight:600;color:var(--text-primary)" id="dsr-total">—</div>
-            </div>
-            <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px">
-              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Debt-Service Ratio</div>
-              <div style="font-size:18px;font-weight:600" id="dsr-ratio">—</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label>Brief Description of Loan Purpose</label>
-          <textarea id="loan-desc" placeholder="Briefly describe what the funds will be used for and how repayment will be made. e.g. Purchase of 50 bags of rice for resale at Balogun Market..."></textarea>
-        </div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Collateral / Asset Value (₦)</label>
-            <div class="input-prefix-wrap">
-              <span class="input-prefix">₦</span>
-              <input type="number" id="collateral" placeholder="0.00" min="0">
-            </div>
-            <div class="input-hint">Leave blank if unsecured application</div>
-          </div>
-          <div>
-            <label>Guarantor Available?</label>
-            <select id="guarantor">
-              <option>No guarantor</option>
-              <option>Yes — guarantor available</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-nav">
-          <button class="btn btn-secondary" onclick="prevStep()">
-            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Back
-          </button>
-          <button class="btn btn-primary" onclick="nextStep()">
-            Continue
-            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- ══ STEP 4: DOCUMENTS ══ -->
-      <div class="step-content" id="step-4">
-        <div class="section-eyebrow">Step 4 of 5</div>
-        <h1 class="section-title">Supporting Documents</h1>
-        <p class="section-desc">Upload clear, legible copies of the documents below. All four are required to process your application.</p>
-
-        <div class="callout callout-info">
-          <div class="callout-icon">i</div>
-          <div class="callout-body">
-            <strong>Accepted formats:</strong> PDF, JPG, PNG, JPEG &nbsp;·&nbsp; <strong>Max file size:</strong> 5MB per document.
-            Ensure documents are clear, fully visible, and not expired. Blurred or cropped files will delay processing.
-          </div>
-        </div>
-
-        <div class="docs-grid">
-          <div>
-            <label>Business Registration Certificate <span class="req">*</span></label>
-            <div class="upload-zone" id="zone-biz">
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'biz','Business Reg. Certificate')">
-              <div class="upload-icon">
-                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              </div>
-              <div class="upload-title">Click or drag to upload</div>
-              <div class="upload-sub">CAC Certificate of Incorporation or Business Name</div>
-              <div style="margin-top:8px">
-                <span class="upload-tag">PDF</span>
-                <span class="upload-tag">JPG</span>
-                <span class="upload-tag">PNG</span>
-              </div>
-            </div>
-            <div id="file-biz"></div>
-          </div>
-
-          <div>
-            <label>6 Months Bank Statement <span class="req">*</span></label>
-            <div class="upload-zone" id="zone-bank">
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'bank','Bank Statement')">
-              <div class="upload-icon">
-                <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-              </div>
-              <div class="upload-title">Click or drag to upload</div>
-              <div class="upload-sub">Last 6 consecutive months — stamped by bank</div>
-              <div style="margin-top:8px">
-                <span class="upload-tag">PDF</span>
-                <span class="upload-tag">JPG</span>
-                <span class="upload-tag">PNG</span>
-              </div>
-            </div>
-            <div id="file-bank"></div>
-          </div>
-
-          <div>
-            <label>Tax Identification Number (TIN) <span class="req">*</span></label>
-            <div class="upload-zone" id="zone-tin">
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'tin','TIN Certificate')">
-              <div class="upload-icon">
-                <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              </div>
-              <div class="upload-title">Click or drag to upload</div>
-              <div class="upload-sub">FIRS-issued TIN certificate or JTAX card</div>
-              <div style="margin-top:8px">
-                <span class="upload-tag">PDF</span>
-                <span class="upload-tag">JPG</span>
-                <span class="upload-tag">PNG</span>
-              </div>
-            </div>
-            <div id="file-tin"></div>
-          </div>
-
-          <div>
-            <label>Utility Bill / Proof of Address <span class="req">*</span></label>
-            <div class="upload-zone" id="zone-utility">
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'utility','Utility Bill')">
-              <div class="upload-icon">
-                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              </div>
-              <div class="upload-title">Click or drag to upload</div>
-              <div class="upload-sub">NEPA/EKEDC bill, LAWMA, or water bill — not older than 3 months</div>
-              <div style="margin-top:8px">
-                <span class="upload-tag">PDF</span>
-                <span class="upload-tag">JPG</span>
-                <span class="upload-tag">PNG</span>
-              </div>
-            </div>
-            <div id="file-utility"></div>
-          </div>
-        </div>
-
-        <div class="divider"><div class="divider-line"></div><div class="divider-label">Optional but recommended</div><div class="divider-line"></div></div>
-
-        <div class="field-row cols-2">
-          <div>
-            <label>Valid Government ID</label>
-            <div class="upload-zone" style="padding:18px 16px">
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'id','Govt ID')">
-              <div style="display:flex;align-items:center;gap:12px">
-                <div class="upload-icon" style="margin:0;flex-shrink:0">
-                  <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                </div>
-                <div style="text-align:left">
-                  <div class="upload-title" style="font-size:13px">NIN / Passport / Driver's Licence</div>
-                  <div class="upload-sub">Any valid government-issued photo ID</div>
-                </div>
-              </div>
-            </div>
-            <div id="file-id"></div>
-          </div>
-          <div>
-            <label>Passport Photograph</label>
-            <div class="upload-zone" style="padding:18px 16px">
-              <input type="file" accept=".jpg,.jpeg,.png" onchange="handleUpload(this,'passport','Passport Photo')">
-              <div style="display:flex;align-items:center;gap:12px">
-                <div class="upload-icon" style="margin:0;flex-shrink:0">
-                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
-                </div>
-                <div style="text-align:left">
-                  <div class="upload-title" style="font-size:13px">Recent passport photograph</div>
-                  <div class="upload-sub">White background, taken within 6 months</div>
-                </div>
-              </div>
-            </div>
-            <div id="file-passport"></div>
-          </div>
-        </div>
-
-        <div class="form-nav">
-          <button class="btn btn-secondary" onclick="prevStep()">
-            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Back
-          </button>
-          <button class="btn btn-primary" onclick="nextStep()">
-            Continue
-            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- ══ STEP 5: BVN & REVIEW ══ -->
-      <div class="step-content" id="step-5">
-        <div class="section-eyebrow">Step 5 of 5</div>
-        <h1 class="section-title">BVN Verification & Review</h1>
-        <p class="section-desc">Enter your BVN for identity verification, then review your application before final submission.</p>
-
-        <!-- BVN -->
-        <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-xl);padding:28px;margin-bottom:32px;box-shadow:var(--shadow-sm)">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
-            <div style="width:40px;height:40px;background:var(--teal-pale);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <svg style="width:20px;height:20px;stroke:var(--teal);fill:none;stroke-width:1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <div>
-              <div style="font-size:14px;font-weight:600;color:var(--text-primary)">Bank Verification Number (BVN)</div>
-              <div style="font-size:12px;color:var(--text-muted)">Required for identity verification — soft enquiry only</div>
-            </div>
-          </div>
-
-          <div class="field-row cols-2">
-            <div>
-              <label>Your BVN <span class="req">*</span></label>
-              <div class="bvn-wrap">
-                <input type="text" id="bvn" placeholder="11-digit BVN" maxlength="11" oninput="validateBVN()">
-                <span class="bvn-status" id="bvn-status"></span>
-              </div>
-              <div class="input-hint">Dial *565*0# on your registered phone to retrieve your BVN</div>
-            </div>
-            <div style="display:flex;align-items:flex-end">
-              <div style="background:var(--off-white);border-radius:var(--radius);padding:14px 16px;font-size:13px;color:var(--text-secondary);line-height:1.6;width:100%">
-                Your BVN is encrypted in transit. It will only be used for credit bureau verification and will not be stored beyond this application.
-              </div>
-            </div>
-          </div>
-
-          <label class="checkbox-row" style="margin-top:8px">
-            <input type="checkbox" id="bvn-consent">
-            <div class="checkbox-text">
-              I consent to my BVN being used to retrieve my credit bureau data for the purpose of this loan application.
-              <small>This is a soft enquiry and will not negatively affect my credit score.</small>
-            </div>
-          </label>
-        </div>
-
-        <!-- Review summary -->
-        <div style="font-size:13px;font-weight:600;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:16px">Application Summary</div>
-
-        <div class="review-block">
-          <div class="review-block-header">
-            <div class="review-block-title">Personal Information</div>
-            <button class="review-edit" onclick="goTo(1)">Edit</button>
-          </div>
-          <div class="review-block-body">
-            <div class="review-row"><div class="review-key">Full Name</div><div class="review-val" id="rv-name">—</div></div>
-            <div class="review-row"><div class="review-key">Phone</div><div class="review-val" id="rv-phone">—</div></div>
-            <div class="review-row"><div class="review-key">Email</div><div class="review-val" id="rv-email">—</div></div>
-            <div class="review-row"><div class="review-key">State</div><div class="review-val" id="rv-state">—</div></div>
-          </div>
-        </div>
-
-        <div class="review-block">
-          <div class="review-block-header">
-            <div class="review-block-title">Employment & Income</div>
-            <button class="review-edit" onclick="goTo(2)">Edit</button>
-          </div>
-          <div class="review-block-body">
-            <div class="review-row"><div class="review-key">Status</div><div class="review-val" id="rv-emp">—</div></div>
-            <div class="review-row"><div class="review-key">Sector</div><div class="review-val" id="rv-sector">—</div></div>
-            <div class="review-row"><div class="review-key">Monthly Net Income</div><div class="review-val" id="rv-income">—</div></div>
-            <div class="review-row"><div class="review-key">Default History</div><div class="review-val" id="rv-default">—</div></div>
-          </div>
-        </div>
-
-        <div class="review-block">
-          <div class="review-block-header">
-            <div class="review-block-title">Loan Request</div>
-            <button class="review-edit" onclick="goTo(3)">Edit</button>
-          </div>
-          <div class="review-block-body">
-            <div class="review-row"><div class="review-key">Amount Requested</div><div class="review-val" id="rv-amount">—</div></div>
-            <div class="review-row"><div class="review-key">Tenure</div><div class="review-val" id="rv-tenure">—</div></div>
-            <div class="review-row"><div class="review-key">Purpose</div><div class="review-val" id="rv-purpose">—</div></div>
-            <div class="review-row"><div class="review-key">Monthly Repayment (est.)</div><div class="review-val" id="rv-repay">—</div></div>
-          </div>
-        </div>
-
-        <div class="review-block">
-          <div class="review-block-header">
-            <div class="review-block-title">Documents Submitted</div>
-            <button class="review-edit" onclick="goTo(4)">Edit</button>
-          </div>
-          <div class="review-block-body">
-            <div class="review-row">
-              <div class="review-key">Business Registration</div>
-              <div class="review-val" id="rv-biz">—</div>
-            </div>
-            <div class="review-row">
-              <div class="review-key">Bank Statement</div>
-              <div class="review-val" id="rv-bank">—</div>
-            </div>
-            <div class="review-row">
-              <div class="review-key">TIN Certificate</div>
-              <div class="review-val" id="rv-tin">—</div>
-            </div>
-            <div class="review-row">
-              <div class="review-key">Utility Bill</div>
-              <div class="review-val" id="rv-util">—</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Declaration -->
-        <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;margin-top:24px;box-shadow:var(--shadow-sm)">
-          <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:14px">Declaration</div>
-          <label class="checkbox-row">
-            <input type="checkbox" id="declare-1">
-            <div class="checkbox-text">
-              I confirm that all information provided in this application is true, accurate, and complete to the best of my knowledge.
-              <small>Providing false information is a criminal offence under Nigerian law.</small>
-            </div>
-          </label>
-          <label class="checkbox-row">
-            <input type="checkbox" id="declare-2">
-            <div class="checkbox-text">
-              I authorise Joyful Smile Nigeria Limited to verify my information through relevant databases, registries, and credit bureaus.
-              <small>In line with the Nigeria Data Protection Regulation (NDPR) 2019.</small>
-            </div>
-          </label>
-          <label class="checkbox-row" style="margin-bottom:0">
-            <input type="checkbox" id="declare-3">
-            <div class="checkbox-text">
-              I have read and I agree to the Terms & Conditions and Privacy Policy of Joyful Smile Nigeria Limited.
-            </div>
-          </label>
-        </div>
-
-        <div class="form-nav">
-          <button class="btn btn-secondary" onclick="prevStep()">
-            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Back
-          </button>
-          <button class="btn btn-primary" onclick="submitApp()" style="padding:0 40px;background:var(--navy)">
-            Submit Application
-            <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-          </button>
-        </div>
-      </div>
-
-    </div><!-- /form-area -->
-
-    <!-- ══ SUCCESS SCREEN ══ -->
-    <div class="success-screen" id="success-screen">
-      <div class="success-icon">
-        <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-      </div>
-      <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--navy);margin-bottom:8px">
-        Application Submitted
-      </div>
-      <p style="font-size:15px;color:var(--text-secondary);margin-bottom:4px">Your reference number</p>
-      <div class="success-ref" id="ref-number">JSN-000000</div>
-      <p class="success-note">
-        Your loan application has been received. Our team will review your documents and contact you within <strong>24 to 48 business hours</strong>.
-      </p>
-      <div class="success-steps">
-        <div class="success-step">
-          <div class="success-step-num">01 — Received</div>
-          <div class="success-step-text">Your application is in our review queue</div>
-        </div>
-        <div class="success-step">
-          <div class="success-step-num">02 — Review</div>
-          <div class="success-step-text">Documents and credit check within 24–48 hrs</div>
-        </div>
-        <div class="success-step">
-          <div class="success-step-num">03 — Decision</div>
-          <div class="success-step-text">You will be contacted with our decision</div>
-        </div>
-      </div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:8px">
-        Questions? Call <strong style="color:var(--teal)">07010057527</strong> or email <strong style="color:var(--teal)">joyfulsmilesnigerialimited@gmail.com</strong>
-      </div>
-    </div>
-
-  </div><!-- /main-content -->
-</div><!-- /app-shell -->
-
-<script>
-let currentStep = 1;
-const totalSteps = 5;
-const uploadedFiles = {};
-
-const stepNames = ['Personal Details','Employment & Income','Loan Request','Documents','BVN & Review'];
-const progressPct = [20,40,60,80,100];
-
-function goTo(n){
-  document.getElementById('step-'+currentStep).classList.remove('active');
-  document.querySelectorAll('.step-item')[currentStep-1].classList.remove('active');
-  if(n > currentStep) document.querySelectorAll('.step-item')[currentStep-1].classList.add('completed');
-  currentStep = n;
-  document.getElementById('step-'+currentStep).classList.add('active');
-  document.querySelectorAll('.step-item')[currentStep-1].classList.remove('completed');
-  document.querySelectorAll('.step-item')[currentStep-1].classList.add('active');
-  document.getElementById('top-step-name').textContent = stepNames[n-1];
-  document.getElementById('progress-fill').style.width = progressPct[n-1]+'%';
-  document.getElementById('progress-label').textContent = 'Step '+n+' of '+totalSteps;
-  if(n===5) populateReview();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function nextStep(){ if(currentStep < totalSteps) goTo(currentStep+1); }
-function prevStep(){ if(currentStep > 1) goTo(currentStep-1); }
-
-function validateBVN(){
-  const v = document.getElementById('bvn').value;
-  const s = document.getElementById('bvn-status');
-  if(v.length===11 && /^\d+$/.test(v)){s.textContent='✓ Valid';s.className='bvn-status bvn-ok';}
-  else if(v.length>0){s.textContent='11 digits required';s.className='bvn-status bvn-err';}
-  else{s.textContent='';s.className='bvn-status';}
-}
-
-function handleUpload(input, key, label){
-  const file = input.files[0];
-  if(!file) return;
-  uploadedFiles[key] = {name:file.name, file:file};
-  const container = document.getElementById('file-'+key);
-  container.innerHTML = `
-    <div class="file-uploaded">
-      <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-      <span class="file-uploaded-name">${file.name}</span>
-      <button class="file-remove" onclick="removeFile('${key}','${label}')">×</button>
-    </div>`;
-  document.getElementById('zone-'+key)?.classList.add('uploaded');
-}
-
-function removeFile(key){
-  delete uploadedFiles[key];
-  document.getElementById('file-'+key).innerHTML='';
-}
-
-function fmt(n){ return '₦'+Number(n).toLocaleString('en-NG'); }
-
-function updateDSR(){
-  const amt = parseFloat(document.getElementById('loan-amount').value)||0;
-  const tenure = parseInt(document.getElementById('loan-tenure').value)||0;
-  const income = parseFloat(document.getElementById('monthly-income').value)||0;
-  const card = document.getElementById('dsr-card');
-  if(amt>0 && tenure>0){
-    card.style.display='block';
-    const monthly = amt/tenure;
-    const total = monthly*tenure;
-    const dsr = income>0 ? (monthly/income*100) : null;
-    document.getElementById('dsr-monthly').textContent = fmt(monthly.toFixed(0));
-    document.getElementById('dsr-total').textContent = fmt(total.toFixed(0));
-    const ratioEl = document.getElementById('dsr-ratio');
-    if(dsr!==null){
-      ratioEl.textContent = dsr.toFixed(1)+'%';
-      ratioEl.style.color = dsr>50?'#C0392B':dsr>35?'#8B5E00':'#0F7B6C';
-    } else {
-      ratioEl.textContent='—';ratioEl.style.color='var(--text-primary)';
+def init_state():
+    if "step" not in st.session_state:
+        st.session_state.step = 1
+    if "uploaded" not in st.session_state:
+        st.session_state.uploaded = {}
+    if "submitted" not in st.session_state:
+        st.session_state.submitted = False
+    defaults = {
+        "first_name": "", "last_name": "", "middle_name": "", "dob": "",
+        "phone": "", "email": "", "marital": "", "dependants": 0, "family": 1,
+        "education": "", "state": "", "address": "",
+        "emp_status": "", "emp_sector": "", "employer": "", "emp_years": "",
+        "income_type": "", "pay_freq": "", "monthly_income": 0, "other_income": 0,
+        "obligations": 0, "active_loans": 0, "default_history": "Never",
+        "loan_amount": 0, "loan_tenure": "", "loan_purpose": "", "loan_type": "Cash Loan",
+        "collateral": 0, "guarantor": "No guarantor",
+        "bvn": "", "bvn_consent": False,
+        "declare1": False, "declare2": False, "declare3": False
     }
-  } else { card.style.display='none'; }
-}
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
-function docBadge(key){
-  if(uploadedFiles[key]) return `<span class="review-badge badge-ok">✓ Uploaded</span>`;
-  return `<span class="review-badge badge-missing">Not uploaded</span>`;
-}
 
-function populateReview(){
-  const fn = document.getElementById('first-name').value;
-  const ln = document.getElementById('last-name').value;
-  document.getElementById('rv-name').textContent = [fn,ln].filter(Boolean).join(' ')||'—';
-  document.getElementById('rv-phone').textContent = document.getElementById('phone').value||'—';
-  document.getElementById('rv-email').textContent = document.getElementById('email').value||'—';
-  document.getElementById('rv-state').textContent = document.getElementById('state').value||'—';
-  document.getElementById('rv-emp').textContent = document.getElementById('emp-status').value||'—';
-  document.getElementById('rv-sector').textContent = document.getElementById('emp-sector').value||'—';
-  const inc = document.getElementById('monthly-income').value;
-  document.getElementById('rv-income').textContent = inc ? fmt(inc) : '—';
-  document.getElementById('rv-default').textContent = document.getElementById('default-history').value||'—';
-  const lamt = document.getElementById('loan-amount').value;
-  document.getElementById('rv-amount').textContent = lamt ? fmt(lamt) : '—';
-  const ten = document.getElementById('loan-tenure').value;
-  document.getElementById('rv-tenure').textContent = ten ? ten+' months' : '—';
-  document.getElementById('rv-purpose').textContent = document.getElementById('loan-purpose').value||'—';
-  if(lamt && ten){ document.getElementById('rv-repay').textContent = fmt((lamt/ten).toFixed(0))+' / month'; }
-  document.getElementById('rv-biz').innerHTML = docBadge('biz');
-  document.getElementById('rv-bank').innerHTML = docBadge('bank');
-  document.getElementById('rv-tin').innerHTML = docBadge('tin');
-  document.getElementById('rv-util').innerHTML = docBadge('utility');
-}
+def find_letterhead_path():
+  """Try to locate the 'Joyful Smiles Letterhead.pdf' file in likely locations.
 
-function submitApp(){
-  const d1=document.getElementById('declare-1').checked;
-  const d2=document.getElementById('declare-2').checked;
-  const d3=document.getElementById('declare-3').checked;
-  const bvnOk=document.getElementById('bvn-status').classList.contains('bvn-ok');
-  const consent=document.getElementById('bvn-consent').checked;
-  if(!d1||!d2||!d3){alert('Please confirm all three declaration checkboxes before submitting.');return;}
-  if(!bvnOk){alert('Please enter a valid 11-digit BVN before submitting.');return;}
-  if(!consent){alert('Please provide consent for BVN verification.');return;}
-  const ref = 'JSN-'+Math.random().toString().slice(2,8).toUpperCase();
-  document.getElementById('ref-number').textContent = ref;
-  document.querySelector('.main-content .form-area').style.display='none';
-  document.querySelector('.top-bar').style.display='none';
-  document.getElementById('success-screen').style.display='flex';
-  document.querySelectorAll('.step-item').forEach(s=>s.classList.add('completed'));
-}
+  Returns the absolute path or None if not found.
+  """
+  base_dir = os.path.dirname(os.path.abspath(__file__))
+  candidates = [
+    os.path.join(base_dir, 'Joyful Smiles Letterhead.pdf'),
+    os.path.join(base_dir, '..', 'Joyful Smile', 'Joyful Smiles Letterhead.pdf'),
+    os.path.join(os.path.expanduser('~'), 'Desktop', 'Joyful Smile', 'Joyful Smiles Letterhead.pdf'),
+    os.path.join(os.path.expanduser('~'), 'Desktop', 'Joyful Smiles Letterhead.pdf'),
+  ]
+  for p in candidates:
+    if os.path.exists(p):
+      return os.path.abspath(p)
+  # last resort: search one level up for matching file name
+  root = os.path.dirname(base_dir)
+  for folder in (base_dir, root):
+    try:
+      for fname in os.listdir(folder):
+        if 'letterhead' in fname.lower() and fname.lower().endswith('.pdf'):
+          return os.path.join(folder, fname)
+    except Exception:
+      continue
+  return None
 
-function toggleEmpFields(){
-  const v=document.getElementById('emp-status').value;
-  const show=!v.includes('Unemployed')&&!v.includes('Retired');
-  document.getElementById('employer-fields').style.opacity=show?'1':'0.4';
-}
-</script>
-</body>
-</html>
+
+def load_letterhead_image_and_contacts():
+  """Return (image_bytes_or_None, contacts_dict)
+
+  contacts_dict may contain keys: company, phone, email, address
+  """
+  path = find_letterhead_path()
+  contacts = {"company": "Joyful Smile Nigeria Limited", "phone": "07010057527", "email": "joyfulsmilesnigerialimited@gmail.com", "address": None, "pdf_path": None}
+  if not path or not fitz:
+    # Either not found or PyMuPDF unavailable — return defaults and no image
+    if path:
+      contacts['pdf_path'] = path
+    return None, contacts
+
+  try:
+    doc = fitz.open(path)
+    page = doc.load_page(0)
+    # render as PNG
+    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+    img_bytes = pix.tobytes('png')
+    text = page.get_text('text')
+    contacts['pdf_path'] = path
+
+    # extract email
+    emails = re.findall(r'[\w\.-]+@[\w\.-]+\.[A-Za-z]{2,}', text)
+    if emails:
+      contacts['email'] = emails[0]
+
+    # extract phone (Nigerian formats)
+    phones = re.findall(r'(?:\+234|0)\d{10}', text)
+    if phones:
+      contacts['phone'] = phones[0]
+
+    # try to get a company line or address — heuristic: first 6 non-empty lines
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    if lines:
+      # prefer a line containing 'Joyful' or 'Joyful Smile'
+      for ln in lines[:8]:
+        if 'joyful' in ln.lower():
+          contacts['company'] = ln
+          break
+      # attempt to build an address snippet from remaining lines
+      addr_lines = []
+      for ln in lines[:10]:
+        if any(tok in ln.lower() for tok in ('street', 'road', 'lagos', 'nigeria', 'office', 'suite', 'plot', 'p.o', 'p.o.')):
+          addr_lines.append(ln)
+      if addr_lines:
+        contacts['address'] = ' | '.join(addr_lines)
+
+    return img_bytes, contacts
+  except Exception:
+    return None, contacts
+
+
+def next_step():
+    st.session_state.step = min(5, st.session_state.step + 1)
+
+def prev_step():
+    st.session_state.step = max(1, st.session_state.step - 1)
+
+def set_step(n):
+    st.session_state.step = int(n)
+
+def fmt_naira(n):
+    try:
+        return "₦{:,.0f}".format(float(n))
+    except Exception:
+        return "—"
+
+def validate_bvn(v: str):
+    return v and v.isdigit() and len(v) == 11
+
+init_state()
+
+# ---------------------------
+# Layout: sidebar + main
+# ---------------------------
+cols = st.columns([0.32, 1.0])
+with cols[0]:
+  st.markdown('<div class="sidebar">', unsafe_allow_html=True)
+  # Try to load letterhead logo and contact details
+  logo_img, contacts = load_letterhead_image_and_contacts()
+  if logo_img:
+    # display image (first page of letterhead) as logo
+    try:
+      st.image(logo_img, width=64)
+    except Exception:
+      # fallback to the SVG block if image rendering fails
+      st.markdown('<div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm0 14c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-2-6.5l1.5 1.5 3-3"/></svg></div>', unsafe_allow_html=True)
+  else:
+    st.markdown('<div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm0 14c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-2-6.5l1.5 1.5 3-3"/></svg></div>', unsafe_allow_html=True)
+
+  # Company name and subtitle from contacts (fallbacks provided)
+  st.markdown(f"<div class=\"logo-brand\">{contacts.get('company','Joyful Smile Nigeria Limited')}</div>", unsafe_allow_html=True)
+  st.markdown(f"<div class=\"logo-sub\">Financial Services</div>", unsafe_allow_html=True)
+  # Tagline (if address available, show shortened address)
+  tagline = contacts.get('address') or 'Your growth journey begins with a single application. We make it simple.'
+  st.markdown(f"<div class=\"sidebar-tagline\">{tagline}</div>", unsafe_allow_html=True)
+
+    step_names = ["Personal Details", "Employment & Income", "Loan Request", "Documents", "BVN & Review"]
+    for i, name in enumerate(step_names, start=1):
+        if st.button(f"{i}. {name}", key=f"step_btn_{i}"):
+            set_step(i)
+
+  st.markdown('---')
+  st.markdown('<div class="help-line">Need assistance?</div>', unsafe_allow_html=True)
+  phone = contacts.get('phone', '07010057527')
+  email = contacts.get('email', 'joyfulsmilesnigerialimited@gmail.com')
+  st.markdown(f'<div class="help-contact">{phone}</div>', unsafe_allow_html=True)
+  st.markdown(f'<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px">{email}</div>', unsafe_allow_html=True)
+  # If the letterhead PDF was discovered, offer it for download
+  if contacts.get('pdf_path') and os.path.exists(contacts['pdf_path']):
+    try:
+      with open(contacts['pdf_path'], 'rb') as _f:
+        pdf_bytes = _f.read()
+      st.download_button(label='Download Letterhead (PDF)', data=pdf_bytes, file_name=os.path.basename(contacts['pdf_path']), mime='application/pdf')
+    except Exception:
+      pass
+  st.markdown('</div>', unsafe_allow_html=True)
+
+with cols[1]:
+    st.markdown('<div class="main-content">', unsafe_allow_html=True)
+
+    progress_map = {1:20,2:40,3:60,4:80,5:100}
+    st.markdown(f'<div class="top-bar"><div class="top-bar-left">Loan Application &nbsp;/&nbsp; <strong id="top-step-name">{step_names[st.session_state.step-1]}</strong></div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:{progress_map[st.session_state.step]}%"></div></div><div class="progress-label">Step {st.session_state.step} of 5</div></div>', unsafe_allow_html=True)
+
+    # Step 1
+    if st.session_state.step == 1 and not st.session_state.submitted:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-eyebrow">Step 1 of 5</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Personal Details</div>', unsafe_allow_html=True)
+        st.text_input("First Name", key="first_name", placeholder="e.g. Chukwuemeka")
+        st.text_input("Last Name", key="last_name", placeholder="e.g. Okonkwo")
+        st.text_input("Middle Name (optional)", key="middle_name")
+        st.text_input("Date of Birth (DD / MM / YYYY)", key="dob", placeholder="DD / MM / YYYY")
+        st.text_input("Phone Number", key="phone", placeholder="e.g. 08012345678")
+        st.text_input("Email Address", key="email", placeholder="e.g. name@email.com")
+        st.selectbox("Marital Status", ["", "Single", "Married", "Divorced", "Widowed"], key="marital")
+        st.number_input("No. of Dependants", min_value=0, max_value=20, key="dependants")
+        st.number_input("Total Family Members", min_value=1, max_value=20, key="family", value=st.session_state.family)
+        st.selectbox("Highest Education Level", ["", "SSCE / O'Level", "OND / NCE", "HND / B.Sc", "Postgraduate (M.Sc / MBA)", "PhD / Doctorate", "Professional Certification", "No formal education"], key="education")
+        st.selectbox("Residential State", [""] + ["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT — Abuja","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"], key="state")
+        st.text_area("Residential Address", key="address", placeholder="House number, street, town, LGA")
+        if st.button("Continue ➜"):
+            next_step()
+
+    # Step 2
+    if st.session_state.step == 2 and not st.session_state.submitted:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-eyebrow">Step 2 of 5</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Employment & Income</div>', unsafe_allow_html=True)
+        st.selectbox("Employment Status", ["", "Employed (Full-time)", "Employed (Part-time)", "Self-Employed / Business Owner", "Civil Servant / Government Employee", "Contractor / Freelancer", "Retired", "Unemployed"], key="emp_status")
+        st.selectbox("Employment Sector", ["", "Banking & Finance", "Government / Civil Service", "Healthcare & Pharmaceuticals", "Education & Training", "Technology & Telecoms", "Trade & Commerce", "Agriculture & Agribusiness", "Transport & Logistics", "Construction & Real Estate", "Oil & Gas", "Manufacturing", "Creative & Media", "Other"], key="emp_sector")
+        st.text_input("Employer / Business Name", key="employer", placeholder="e.g. Lagos State Government")
+        st.selectbox("Years in Current Role / Business", ["", "Less than 6 months", "6 months to 1 year", "1 to 2 years", "2 to 5 years", "5 to 10 years", "Over 10 years"], key="emp_years")
+        st.selectbox("Income Type", ["", "Fixed Monthly Salary", "Business Revenue (Regular)", "Commission-Based", "Irregular / Seasonal", "Pension", "Rental Income", "Multiple Sources"], key="income_type")
+        st.selectbox("Pay Frequency", ["", "Monthly", "Bi-weekly", "Weekly", "Daily", "Project-based"], key="pay_freq")
+        st.number_input("Monthly Net Income (₦)", min_value=0, step=1000, key="monthly_income", format="%d")
+        st.number_input("Other Monthly Income (₦)", min_value=0, step=1000, key="other_income", format="%d")
+        st.number_input("Total Monthly Obligations (₦)", min_value=0, step=1000, key="obligations", format="%d")
+        st.number_input("Number of Active Loans", min_value=0, max_value=50, key="active_loans")
+        st.selectbox("Previous Loan Default History", ["Never", "5+ years ago", "2 to 5 years ago", "Within the last 2 years"], key="default_history")
+        st.text_input("Work / Office Phone Number", key="work_phone", placeholder="e.g. 0123456789")
+        c1, c2 = st.columns([1,1])
+        with c1:
+            if st.button("← Back"):
+                prev_step()
+        with c2:
+            if st.button("Continue ➜", key="to3"):
+                next_step()
+
+    # Step 3
+    if st.session_state.step == 3 and not st.session_state.submitted:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-eyebrow">Step 3 of 5</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Loan Request</div>', unsafe_allow_html=True)
+        st.number_input("Loan Amount Requested (₦)", min_value=10000, step=10000, key="loan_amount", format="%d")
+        st.selectbox("Loan Tenure (months)", ["", "3", "6", "9", "12", "18", "24", "36"], key="loan_tenure")
+        st.selectbox("Purpose of Loan", ["", "Working Capital / Business Expansion", "Equipment / Machinery Purchase", "Stock / Inventory Purchase", "School Fees / Education", "Medical / Healthcare", "Home Renovation", "Vehicle Purchase", "Personal / Emergency", "Salary Advance", "Other"], key="loan_purpose")
+        st.selectbox("Loan Type", ["Cash Loan", "Revolving Credit"], key="loan_type")
+        loan_amt = st.session_state.loan_amount or 0
+        tenure = int(st.session_state.loan_tenure) if st.session_state.loan_tenure and st.session_state.loan_tenure.isdigit() else 0
+        income_monthly = st.session_state.monthly_income or 0
+        if loan_amt > 0 and tenure > 0:
+            monthly = loan_amt / tenure
+            total = monthly * tenure
+            dsr = (monthly / income_monthly * 100) if income_monthly > 0 else None
+            st.markdown(f"""
+                <div class="card">
+                  <div style="display:flex;gap:12px;">
+                    <div style="flex:1;text-align:center">
+                      <div class="small-muted">Monthly Repayment</div>
+                      <div style="font-weight:700">{fmt_naira(monthly)}</div>
+                    </div>
+                    <div style="flex:1;text-align:center">
+                      <div class="small-muted">Total Repayable</div>
+                      <div style="font-weight:700">{fmt_naira(total)}</div>
+                    </div>
+                    <div style="flex:1;text-align:center">
+                      <div class="small-muted">Debt-Service Ratio</div>
+                      <div style="font-weight:700">{(f'{dsr:.1f}%' if dsr is not None else '—')}</div>
+                    </div>
+                  </div>
+                </div>
+            """, unsafe_allow_html=True)
+        st.text_area("Brief Description of Loan Purpose", key="loan_desc")
+        st.number_input("Collateral / Asset Value (₦)", min_value=0, step=1000, key="collateral", format="%d")
+        st.selectbox("Guarantor Available?", ["No guarantor", "Yes — guarantor available"], key="guarantor")
+        c1, c2 = st.columns([1,1])
+        with c1:
+            if st.button("← Back", key="b3"):
+                prev_step()
+        with c2:
+            if st.button("Continue ➜", key="to4"):
+                next_step()
+
+    # Step 4
+    if st.session_state.step == 4 and not st.session_state.submitted:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-eyebrow">Step 4 of 5</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Supporting Documents</div>', unsafe_allow_html=True)
+        st.markdown('<div class="small-muted">Upload clear, legible copies. Accepted: PDF, JPG, PNG. Max 5MB each.</div>', unsafe_allow_html=True)
+        cols_docs = st.columns(2)
+        with cols_docs[0]:
+            biz = st.file_uploader("Business Registration Certificate (CAC)", type=["pdf","jpg","jpeg","png"], key="biz_reg_file")
+            if biz:
+                st.session_state.uploaded['biz'] = {"name": biz.name, "data": biz.getvalue()}
+                st.markdown(f"<div class=\"file-uploaded\">{biz.name} <span style=\"color:var(--teal)\">Uploaded</span></div>", unsafe_allow_html=True)
+            bank = st.file_uploader("6 Months Bank Statement", type=["pdf","jpg","jpeg","png"], key="bank_stmt_file")
+            if bank:
+                st.session_state.uploaded['bank'] = {"name": bank.name, "data": bank.getvalue()}
+                st.markdown(f"<div class=\"file-uploaded\">{bank.name} <span style=\"color:var(--teal)\">Uploaded</span></div>", unsafe_allow_html=True)
+        with cols_docs[1]:
+            tin = st.file_uploader("Tax Identification Number (TIN)", type=["pdf","jpg","jpeg","png"], key="tin_file")
+            if tin:
+                st.session_state.uploaded['tin'] = {"name": tin.name, "data": tin.getvalue()}
+                st.markdown(f"<div class=\"file-uploaded\">{tin.name} <span style=\"color:var(--teal)\">Uploaded</span></div>", unsafe_allow_html=True)
+            utility = st.file_uploader("Utility Bill / Proof of Address", type=["pdf","jpg","jpeg","png"], key="utility_file")
+            if utility:
+                st.session_state.uploaded['utility'] = {"name": utility.name, "data": utility.getvalue()}
+                st.markdown(f"<div class=\"file-uploaded\">{utility.name} <span style=\"color:var(--teal)\">Uploaded</span></div>", unsafe_allow_html=True)
+        st.markdown('<div class="small-muted">Optional but recommended</div>', unsafe_allow_html=True)
+        opt_cols = st.columns(2)
+        with opt_cols[0]:
+            gov_id = st.file_uploader("Valid Government ID (NIN / Passport / Driver's Licence)", type=["pdf","jpg","jpeg","png"], key="id_file")
+            if gov_id:
+                st.session_state.uploaded['id'] = {"name": gov_id.name, "data": gov_id.getvalue()}
+                st.markdown(f"<div class=\"file-uploaded\">{gov_id.name} <span style=\"color:var(--teal)\">Uploaded</span></div>", unsafe_allow_html=True)
+        with opt_cols[1]:
+            passport = st.file_uploader("Passport Photograph (jpg/png)", type=["jpg","jpeg","png"], key="passport_file")
+            if passport:
+                st.session_state.uploaded['passport'] = {"name": passport.name, "data": passport.getvalue()}
+                st.markdown(f"<div class=\"file-uploaded\">{passport.name} <span style=\"color:var(--teal)\">Uploaded</span></div>", unsafe_allow_html=True)
+        c1, c2 = st.columns([1,1])
+        with c1:
+            if st.button("← Back", key="b4"):
+                prev_step()
+        with c2:
+            if st.button("Continue ➜", key="to5"):
+                next_step()
+
+    # Step 5
+    if st.session_state.step == 5 and not st.session_state.submitted:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-eyebrow">Step 5 of 5</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">BVN Verification & Review</div>', unsafe_allow_html=True)
+        st.text_input("Your BVN (11 digits)", key="bvn")
+        checked = validate_bvn(st.session_state.bvn)
+        if checked:
+            st.markdown('<div style="padding:10px;background:rgba(0,184,168,0.06);border-radius:8px;color:var(--teal);font-weight:700">✓ BVN Format Valid</div>', unsafe_allow_html=True)
+        elif st.session_state.bvn:
+            st.markdown('<div style="padding:10px;background:rgba(240,64,96,0.04);border-radius:8px;color:#C0392B;font-weight:700">⚠️ Invalid BVN</div>', unsafe_allow_html=True)
+        st.checkbox("I consent to BVN-based credit bureau verification (soft enquiry only)", key="bvn_consent")
+
+        st.markdown('<div class="small-muted" style="margin-bottom:8px">Application Summary</div>', unsafe_allow_html=True)
+        def doc_badge(k):
+            if st.session_state.uploaded.get(k):
+                return '<span class="review-badge badge-ok">✓ Uploaded</span>'
+            return '<span class="review-badge badge-missing">Not uploaded</span>'
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight:700">Personal Information</div>', unsafe_allow_html=True)
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Full Name</div><div class=\"review-val\">{(st.session_state.first_name + ' ' + st.session_state.last_name).strip() or '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Phone</div><div class=\"review-val\">{st.session_state.phone or '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Email</div><div class=\"review-val\">{st.session_state.email or '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">State</div><div class=\"review-val\">{st.session_state.state or '—'}</div></div>")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight:700">Employment & Income</div>', unsafe_allow_html=True)
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Status</div><div class=\"review-val\">{st.session_state.emp_status or '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Sector</div><div class=\"review-val\">{st.session_state.emp_sector or '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Monthly Net Income</div><div class=\"review-val\">{fmt_naira(st.session_state.monthly_income) if st.session_state.monthly_income else '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Default History</div><div class=\"review-val\">{st.session_state.default_history or '—'}</div></div>")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight:700">Loan Request</div>', unsafe_allow_html=True)
+        repay_est = "—"
+        if st.session_state.loan_amount and st.session_state.loan_tenure and st.session_state.loan_tenure.isdigit():
+            repay_est = fmt_naira(st.session_state.loan_amount / int(st.session_state.loan_tenure))
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Amount Requested</div><div class=\"review-val\">{fmt_naira(st.session_state.loan_amount) if st.session_state.loan_amount else '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Tenure</div><div class=\"review-val\">{(st.session_state.loan_tenure + ' months') if st.session_state.loan_tenure else '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Purpose</div><div class=\"review-val\">{st.session_state.loan_purpose or '—'}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Monthly Repayment (est.)</div><div class=\"review-val\">{repay_est}</div></div>")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight:700">Documents Submitted</div>', unsafe_allow_html=True)
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Business Registration</div><div class=\"review-val\">{doc_badge('biz')}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Bank Statement</div><div class=\"review-val\">{doc_badge('bank')}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">TIN Certificate</div><div class=\"review-val\">{doc_badge('tin')}</div></div>")
+        st.markdown(f"<div class=\"review-row\"><div class=\"review-key\">Utility Bill</div><div class=\"review-val\">{doc_badge('utility')}</div></div>")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight:700">Declaration</div>', unsafe_allow_html=True)
+        st.checkbox("I confirm information provided is true and complete.", key="declare1")
+        st.checkbox("I authorise Joyful Smile Nigeria Limited to verify my information (NDPR compliant).", key="declare2")
+        st.checkbox("I have read and agree to Terms & Conditions and Privacy Policy.", key="declare3")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        c1, c2 = st.columns([1,1])
+        with c1:
+            if st.button("← Back", key="b5"):
+                prev_step()
+        with c2:
+            if st.button("Submit Application", key="submit_app"):
+                if not (st.session_state.declare1 and st.session_state.declare2 and st.session_state.declare3):
+                    st.error("Please confirm all declaration checkboxes before submitting.")
+                elif not validate_bvn(st.session_state.bvn):
+                    st.error("Please enter a valid 11-digit BVN before submitting.")
+                elif not st.session_state.bvn_consent:
+                    st.error("Please provide consent for BVN verification.")
+                else:
+                    st.session_state.submitted = True
+                    st.session_state.ref = "JSN-" + str(np.random.randint(100000, 999999))
+                    st.experimental_rerun()
+
+    # Success
+    if st.session_state.submitted:
+        st.markdown('<div class="success-screen" style="display:flex">', unsafe_allow_html=True)
+        st.markdown('<div class="success-icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-family:\'Cormorant Garamond\', serif; font-size:36px;font-weight:600;color:var(--navy);margin-bottom:8px">Application Submitted</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="success-ref">{st.session_state.ref}</div>', unsafe_allow_html=True)
+        st.markdown('<p class="success-note">Your loan application has been received. Our team will review your documents and contact you within <strong>24 to 48 business hours</strong>.</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
