@@ -23,201 +23,392 @@ st.set_page_config(
 # ─────────────────────────────────────────
 st.markdown("""
 <style>
-    .main { background-color: #F8F9FA; }
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
+    /* ── ROOT VARIABLES ── */
+    :root {
+        --navy:      #050D1A;
+        --navy-2:    #0A1628;
+        --navy-3:    #0F1F3D;
+        --navy-4:    #162845;
+        --electric:  #00D4FF;
+        --electric-2:#0099CC;
+        --gold:      #FFB700;
+        --green:     #00E5A0;
+        --red:       #FF4560;
+        --amber:     #FFB700;
+        --white:     #F0F6FF;
+        --muted:     #8BA3BF;
+        --border:    rgba(0, 212, 255, 0.15);
+        --glow:      0 0 20px rgba(0, 212, 255, 0.15);
+    }
+
+    /* ── BASE ── */
+    html, body, [class*="css"] {
+        font-family: 'Sora', sans-serif !important;
+        background-color: var(--navy) !important;
+        color: var(--white) !important;
+    }
+
+    .main {
+        background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 50%, #060E1F 100%) !important;
+        background-attachment: fixed !important;
+    }
+
+    /* ── GRID TEXTURE OVERLAY ── */
+    .main::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-image:
+            linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* ── SIDEBAR ── */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, var(--navy-3) 0%, var(--navy-2) 100%) !important;
+        border-right: 1px solid var(--border) !important;
+    }
+    section[data-testid="stSidebar"] > div {
+        background: transparent !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: var(--white) !important;
+    }
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        font-family: 'Space Mono', monospace !important;
+        color: var(--electric) !important;
+        letter-spacing: 0.05em;
+        font-size: 13px !important;
+        text-transform: uppercase;
+    }
+    section[data-testid="stSidebar"] a {
+        color: var(--electric) !important;
+        text-decoration: none;
+    }
+    section[data-testid="stSidebar"] a:hover {
+        color: var(--gold) !important;
+    }
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] li {
+        font-size: 12px !important;
+        color: var(--muted) !important;
+        line-height: 1.8 !important;
+    }
+
+    /* ── LABELS ── */
     .stSlider label,
     .stNumberInput label,
     .stSelectbox label,
     .stCheckbox label,
-    .stTextInput label {
-        color: #1F3864 !important;
-        font-size: 14px !important;
+    .stTextInput label,
+    .stRadio label {
+        color: var(--electric) !important;
+        font-size: 11px !important;
         font-weight: 600 !important;
+        font-family: 'Space Mono', monospace !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
     }
-    .stCheckbox span {
-        color: #1F3864 !important;
-        font-size: 14px !important;
+
+    /* ── INPUTS ── */
+    .stSelectbox div[data-baseweb="select"] > div,
+    .stNumberInput div[data-baseweb="input"],
+    div[data-baseweb="input"] {
+        background-color: var(--navy-3) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 6px !important;
+        color: var(--white) !important;
     }
-    .stSelectbox div[data-baseweb="select"] > div {
-        background-color: #FFFFFF !important;
-        color: #1F3864 !important;
-        border: 1px solid #B5D4F4 !important;
+    .stNumberInput input,
+    div[data-baseweb="input"] input,
+    input[type="number"],
+    input[type="text"] {
+        color: var(--white) !important;
+        background-color: var(--navy-3) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 13px !important;
+        -webkit-text-fill-color: var(--white) !important;
     }
-    .stNumberInput div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #B5D4F4 !important;
-    }
-    .stNumberInput input {
-        color: #1F3864 !important;
-        background-color: #FFFFFF !important;
-    }
-    input[type="number"] {
-        color: #1F3864 !important;
-        background-color: #FFFFFF !important;
-    }
-    div[data-baseweb="select"] span {
-        color: #1F3864 !important;
-        background-color: #FFFFFF !important;
-    }
+    div[data-baseweb="select"] span,
     div[data-baseweb="select"] div {
-        background-color: #FFFFFF !important;
-        color: #1F3864 !important;
+        background-color: var(--navy-3) !important;
+        color: var(--white) !important;
+        font-family: 'Sora', sans-serif !important;
     }
-    div[data-baseweb="input"] input {
-        color: #1F3864 !important;
-        background-color: #FFFFFF !important;
-        -webkit-text-fill-color: #1F3864 !important;
+
+    /* ── SLIDERS ── */
+    .stSlider [data-baseweb="slider"] div[role="slider"] {
+        background-color: var(--electric) !important;
+        border: 2px solid var(--navy) !important;
+        box-shadow: 0 0 8px var(--electric) !important;
     }
+
+    /* ── CHECKBOXES ── */
     .stCheckbox > label > div:first-child {
-        background-color: #FFFFFF !important;
-        border: 2px solid #2E75B6 !important;
+        background-color: var(--navy-3) !important;
+        border: 2px solid var(--electric) !important;
         border-radius: 4px !important;
     }
-    .stCheckbox > label > div:last-child {
-        color: #1F3864 !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
+    .stCheckbox > label > div:last-child,
+    .stCheckbox span {
+        color: var(--white) !important;
+        font-size: 12px !important;
+        font-family: 'Sora', sans-serif !important;
     }
-    .stNumberInput div[data-baseweb="input"] > div {
-        background-color: #FFFFFF !important;
-    }
-    .stNumberInput button {
-        background-color: #EBF4FB !important;
-        color: #1F3864 !important;
-        border: 1px solid #B5D4F4 !important;
-    }
-    div[data-baseweb] {
-        background-color: #FFFFFF !important;
-    }
-    section[data-testid="stSidebar"] > div {
-        background-color: #1F3864 !important;
-    }
-    section[data-testid="stSidebar"] {
-        background-color: #1F3864 !important;
-    }
-    section[data-testid="stSidebar"] * {
-        color: #FFFFFF !important;
-    }
-    section[data-testid="stSidebar"] a {
-        color: #B5D4F4 !important;
-    }
+
+    /* ── BUTTONS ── */
     .stButton > button {
-        background-color: #1F3864 !important;
-        color: white !important;
-        border-radius: 8px !important;
+        background: linear-gradient(135deg, var(--electric-2), var(--electric)) !important;
+        color: var(--navy) !important;
+        border-radius: 6px !important;
         padding: 12px 30px !important;
-        font-size: 16px !important;
-        font-weight: 600 !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        font-family: 'Space Mono', monospace !important;
+        letter-spacing: 0.1em !important;
+        text-transform: uppercase !important;
         border: none !important;
         width: 100% !important;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.3) !important;
+        transition: all 0.2s ease !important;
     }
     .stButton > button:hover {
-        background-color: #2E75B6 !important;
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.6) !important;
+        transform: translateY(-1px) !important;
     }
+
+    /* ── WARNINGS / INFO ── */
+    .stWarning, div[data-testid="stAlert"] {
+        background: rgba(255, 183, 0, 0.08) !important;
+        border: 1px solid rgba(255, 183, 0, 0.3) !important;
+        border-radius: 8px !important;
+        color: var(--white) !important;
+    }
+    .stInfo, [data-baseweb="notification"] {
+        background: rgba(0, 212, 255, 0.06) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+    }
+
+    /* ── HEADINGS ── */
+    h1 {
+        font-family: 'Sora', sans-serif !important;
+        font-weight: 800 !important;
+        font-size: 32px !important;
+        color: var(--white) !important;
+        letter-spacing: -0.02em !important;
+    }
+    h2 {
+        font-family: 'Sora', sans-serif !important;
+        font-weight: 700 !important;
+        color: var(--white) !important;
+    }
+    h3 {
+        font-family: 'Space Mono', monospace !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.1em !important;
+        color: var(--electric) !important;
+    }
+
+    /* ── METRIC CARDS ── */
     .metric-card {
-        background: white;
-        border-radius: 12px;
+        background: linear-gradient(135deg, var(--navy-3), var(--navy-4));
+        border-radius: 10px;
         padding: 20px;
         text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-left: 5px solid #2E75B6;
+        border: 1px solid var(--border);
+        box-shadow: var(--glow);
     }
+
+    /* ── RISK CARDS ── */
     .risk-high {
-        background: #FFF0F0;
-        border-left: 5px solid #E24B4A;
-        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(255,69,96,0.12), rgba(255,69,96,0.05));
+        border-left: 4px solid var(--red);
+        border-radius: 10px;
         padding: 20px;
         text-align: center;
+        box-shadow: 0 0 20px rgba(255,69,96,0.15);
     }
     .risk-medium {
-        background: #FFFBF0;
-        border-left: 5px solid #F0A500;
-        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(255,183,0,0.12), rgba(255,183,0,0.05));
+        border-left: 4px solid var(--amber);
+        border-radius: 10px;
         padding: 20px;
         text-align: center;
+        box-shadow: 0 0 20px rgba(255,183,0,0.15);
     }
     .risk-low {
-        background: #F0FFF4;
-        border-left: 5px solid #1D9E75;
-        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(0,229,160,0.12), rgba(0,229,160,0.05));
+        border-left: 4px solid var(--green);
+        border-radius: 10px;
         padding: 20px;
         text-align: center;
+        box-shadow: 0 0 20px rgba(0,229,160,0.15);
     }
+
+    /* ── SECTION HEADERS ── */
     .section-header {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1F3864;
-        margin-bottom: 10px;
-        padding-bottom: 6px;
-        border-bottom: 2px solid #2E75B6;
+        font-family: 'Space Mono', monospace !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: var(--electric) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.15em !important;
+        margin-bottom: 14px !important;
+        padding-bottom: 8px !important;
+        border-bottom: 1px solid var(--border) !important;
     }
+
+    /* ── INSIGHT / DISCLAIMER BOXES ── */
     .insight-box {
-        background: #EBF4FB;
+        background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,212,255,0.03));
+        border: 1px solid var(--border);
         border-radius: 8px;
-        padding: 14px;
-        font-size: 14px;
-        color: #1F3864;
+        padding: 16px;
+        font-size: 13px;
+        color: var(--white);
         margin-top: 10px;
-        line-height: 1.7;
+        line-height: 1.8;
+        font-family: 'Sora', sans-serif;
     }
     .disclaimer-box {
-        background: #FFF8E7;
-        border-left: 4px solid #F0A500;
+        background: rgba(255,183,0,0.06);
+        border-left: 3px solid var(--amber);
         border-radius: 8px;
         padding: 12px 16px;
-        font-size: 13px;
-        color: #7A5C00;
+        font-size: 12px;
+        color: #D4A800;
         margin-top: 10px;
         line-height: 1.7;
+        font-family: 'Sora', sans-serif;
     }
+
+    /* ── BADGES ── */
     .verified-badge {
-        background: #F0FFF4;
-        border: 1.5px solid #1D9E75;
+        background: rgba(0,229,160,0.12);
+        border: 1px solid var(--green);
         border-radius: 20px;
-        padding: 4px 12px;
-        font-size: 12px;
+        padding: 4px 14px;
+        font-size: 11px;
         font-weight: 700;
-        color: #1D9E75;
+        color: var(--green);
         display: inline-block;
-        margin-top: 6px;
+        font-family: 'Space Mono', monospace;
+        letter-spacing: 0.05em;
     }
     .unverified-badge {
-        background: #FFF8E7;
-        border: 1.5px solid #F0A500;
+        background: rgba(255,183,0,0.08);
+        border: 1px solid var(--amber);
         border-radius: 20px;
-        padding: 4px 12px;
-        font-size: 12px;
+        padding: 4px 14px;
+        font-size: 11px;
         font-weight: 700;
-        color: #B8860B;
+        color: var(--amber);
         display: inline-block;
-        margin-top: 6px;
+        font-family: 'Space Mono', monospace;
+        letter-spacing: 0.05em;
     }
+
+    /* ── MODE BANNERS ── */
     .mode-banner-officer {
-        background: #1F3864;
-        color: white;
-        border-radius: 10px;
+        background: linear-gradient(135deg, var(--navy-3), var(--navy-4));
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--electric);
+        color: var(--white);
+        border-radius: 8px;
         padding: 12px 20px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         margin-bottom: 16px;
+        font-family: 'Space Mono', monospace;
     }
     .mode-banner-customer {
-        background: #1D9E75;
-        color: white;
-        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(0,229,160,0.1), rgba(0,229,160,0.04));
+        border: 1px solid rgba(0,229,160,0.3);
+        border-left: 3px solid var(--green);
+        color: var(--white);
+        border-radius: 8px;
         padding: 12px 20px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         margin-bottom: 16px;
     }
+
+    /* ── FOOTER ── */
     .footer {
         text-align: center;
-        color: #888;
-        font-size: 12px;
-        margin-top: 40px;
+        color: var(--muted);
+        font-size: 11px;
+        font-family: 'Space Mono', monospace;
+        letter-spacing: 0.05em;
+        margin-top: 60px;
         padding-top: 20px;
-        border-top: 1px solid #eee;
+        border-top: 1px solid var(--border);
     }
+    .footer a {
+        color: var(--electric) !important;
+        text-decoration: none;
+    }
+
+    /* ── DIVIDERS ── */
+    hr {
+        border-color: var(--border) !important;
+    }
+
+    /* ── RADIO BUTTONS ── */
+    .stRadio > div {
+        background: var(--navy-3) !important;
+        border-radius: 8px !important;
+        padding: 8px !important;
+        border: 1px solid var(--border) !important;
+    }
+
+    /* ── SELECTBOX DROPDOWN ── */
+    ul[data-baseweb="menu"] {
+        background: var(--navy-3) !important;
+        border: 1px solid var(--border) !important;
+    }
+    li[role="option"]:hover {
+        background: var(--navy-4) !important;
+    }
+
+    /* ── NUMBER INPUT BUTTONS ── */
+    .stNumberInput div[data-baseweb="input"] > div,
+    .stNumberInput button {
+        background-color: var(--navy-4) !important;
+        color: var(--electric) !important;
+        border: 1px solid var(--border) !important;
+    }
+
+    /* ── SUCCESS/ERROR BOXES ── */
+    .stSuccess {
+        background: rgba(0,229,160,0.08) !important;
+        border: 1px solid rgba(0,229,160,0.3) !important;
+        border-radius: 8px !important;
+    }
+    .stError {
+        background: rgba(255,69,96,0.08) !important;
+        border: 1px solid rgba(255,69,96,0.3) !important;
+        border-radius: 8px !important;
+    }
+
+    /* ── SPINNER ── */
+    .stSpinner > div {
+        border-top-color: var(--electric) !important;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--navy); }
+    ::-webkit-scrollbar-thumb { background: var(--electric-2); border-radius: 2px; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -263,9 +454,9 @@ FEATURE_LABELS = {
     'INCOME_PER_PERSON':            'Income Per Family Member (₦)',
     'CNT_CHILDREN':                 'Number of Dependants',
     'CNT_FAM_MEMBERS':              'Total Family Size',
-    'FLAG_OWN_CAR':                 'Owns a Vehicle',
-    'FLAG_OWN_REALTY':              'Owns Property / Real Estate',
-    'FLAG_DOCUMENT_3':              'ID Document 3 Submitted',
+    'FLAG_OWN_CAR':                 'Business Registration',
+    'FLAG_OWN_REALTY':              'Bank Statement Submitted',
+    'FLAG_DOCUMENT_3':              'Key Documents Submitted',
     'NAME_CONTRACT_TYPE':           'Loan Type (Revolving)',
     'NAME_FAMILY_STATUS_Married':   'Marital Status (Married)',
     'NAME_EDUCATION_TYPE_Higher education': 'Education (Tertiary)',
@@ -474,13 +665,13 @@ if "Customer Application" in view_mode:
 
     if st.session_state.customer_submitted:
         st.markdown("""
-        <div style='background:#F0FFF4;border-left:5px solid #1D9E75;
+        <div style='background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(0,229,160,0.03));border-left:4px solid #00E5A0;
                     border-radius:12px;padding:30px;text-align:center;margin-top:20px'>
             <div style='font-size:40px'>✅</div>
-            <div style='font-size:22px;font-weight:700;color:#1D9E75;margin-top:10px'>
+            <div style='font-size:22px;font-weight:700;color:#00E5A0;margin-top:10px'>
                 Application Received
             </div>
-            <div style='font-size:15px;color:#333;margin-top:10px;line-height:1.8'>
+            <div style='font-size:15px;color:#C8D8E8;margin-top:10px;line-height:1.8'>
                 Thank you. Your application has been submitted successfully.<br>
                 A loan officer will review your details and reach out to you shortly.<br><br>
                 <strong>Reference:</strong> APP-{ref}
@@ -509,9 +700,10 @@ if "Customer Application" in view_mode:
             c_children = st.number_input("Number of Dependants", 0, 10, 0)
         with c3:
             c_family_members = st.number_input("Total Family Members", 1, 15, 2)
-            c_own_car = st.checkbox("✅ I own a vehicle")
-            c_own_realty = st.checkbox("✅ I own property / real estate")
-            c_flag_doc = st.checkbox("✅ Valid ID document available")
+            c_biz_reg = st.checkbox("📄 Proof of Business Registration")
+            c_bank_stmt = st.checkbox("🏦 6 Months Bank Statement")
+            c_tax_id = st.checkbox("📋 Tax Identification Number (TIN)")
+            c_utility = st.checkbox("🔖 Utility Bill / Proof of Address")
 
         st.markdown("---")
 
@@ -579,7 +771,7 @@ if "Customer Application" in view_mode:
         st.markdown('<div class="section-header">4. BVN Verification (Recommended)</div>', unsafe_allow_html=True)
         st.markdown("""
         <div style='background:#EBF4FB;border-radius:8px;padding:12px 16px;
-                    font-size:13px;color:#1F3864;margin-bottom:14px;line-height:1.7'>
+                    font-size:13px;color:#F0F6FF;margin-bottom:14px;line-height:1.7'>
             Providing your BVN allows us to verify your identity and retrieve your
             credit bureau history automatically, speeding up your application review.
             Your BVN will not be stored beyond what is required for this verification.
@@ -610,10 +802,7 @@ if "Customer Application" in view_mode:
                 </div>
                 """, unsafe_allow_html=True)
 
-        c_bvn_consent = st.checkbox(
-            "✅ I consent to my BVN being used to retrieve my credit bureau data for the purpose of this loan application. "
-            "I understand this will be a soft enquiry and will not negatively affect my credit score."
-        )
+        c_bvn_consent = st.checkbox("I consent to BVN-based credit bureau verification (soft enquiry only)")
 
         if c_bvn and c_bvn_consent and bvn_verified:
             st.info(
@@ -637,9 +826,13 @@ if "Customer Application" in view_mode:
                     "education": c_education,
                     "children": c_children,
                     "family_members": c_family_members,
-                    "own_car": c_own_car,
-                    "own_realty": c_own_realty,
-                    "flag_document_3": c_flag_doc,
+                    "biz_reg": c_biz_reg,
+                    "bank_stmt": c_bank_stmt,
+                    "tax_id": c_tax_id,
+                    "utility": c_utility,
+                    "own_car": False,
+                    "own_realty": False,
+                    "flag_document_3": c_biz_reg or c_bank_stmt or c_tax_id or c_utility,
                     "employment_sector": c_employment_sector,
                     "income_type": c_income_type,
                     "employment_years": c_employment_years,
@@ -722,7 +915,7 @@ else:
 
     with col1:
         st.markdown(
-            '<p style="font-size:15px;font-weight:700;color:#1F3864;'
+            '<p style="font-size:11px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;'
             'border-bottom:2px solid #2E75B6;padding-bottom:6px">Personal Details</p>',
             unsafe_allow_html=True
         )
@@ -744,7 +937,7 @@ else:
 
     with col2:
         st.markdown(
-            '<p style="font-size:15px;font-weight:700;color:#1F3864;'
+            '<p style="font-size:11px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;'
             'border-bottom:2px solid #2E75B6;padding-bottom:6px">Financial Details</p>',
             unsafe_allow_html=True
         )
@@ -777,7 +970,7 @@ else:
 
     with col3:
         st.markdown(
-            '<p style="font-size:15px;font-weight:700;color:#1F3864;'
+            '<p style="font-size:11px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;'
             'border-bottom:2px solid #2E75B6;padding-bottom:6px">Employment, History & Identity</p>',
             unsafe_allow_html=True
         )
@@ -807,7 +1000,7 @@ else:
 
         # Credit history enhancements
         st.markdown(
-            '<p style="font-size:13px;font-weight:600;color:#1F3864;margin-top:10px;margin-bottom:4px">'
+            '<p style="font-size:13px;font-weight:600;color:#F0F6FF;margin-top:10px;margin-bottom:4px">'
             'Credit History</p>',
             unsafe_allow_html=True
         )
@@ -842,7 +1035,7 @@ else:
 
         # BVN
         st.markdown(
-            '<p style="font-size:13px;font-weight:600;color:#1F3864;margin-top:10px;margin-bottom:4px">'
+            '<p style="font-size:13px;font-weight:600;color:#F0F6FF;margin-top:10px;margin-bottom:4px">'
             'Identity Verification</p>',
             unsafe_allow_html=True
         )
@@ -867,13 +1060,15 @@ else:
             st.markdown('<span class="unverified-badge">⚠️ BVN Invalid or Consent Pending</span>', unsafe_allow_html=True)
 
         st.markdown(
-            '<p style="font-size:13px;font-weight:600;color:#1F3864;margin-top:10px;margin-bottom:4px">'
-            'Asset Ownership</p>',
+            '<p style="font-size:13px;font-weight:600;color:#F0F6FF;margin-top:10px;margin-bottom:4px">'
+            'Document Verification</p>',
             unsafe_allow_html=True
         )
-        own_car = st.checkbox("✅ Owns a Vehicle", value=pre("own_car", False))
-        own_realty = st.checkbox("✅ Owns Property / Real Estate", value=pre("own_realty", False))
-        flag_document_3 = st.checkbox("✅ Key ID Document Submitted", value=pre("flag_document_3", False))
+        doc_biz_reg   = st.checkbox("📄 Business Registration Submitted", value=pre("biz_reg", False))
+        doc_bank_stmt = st.checkbox("🏦 6-Month Bank Statement Submitted", value=pre("bank_stmt", False))
+        doc_tin       = st.checkbox("📋 TIN / Tax Document Submitted", value=pre("tax_id", False))
+        doc_utility   = st.checkbox("🔖 Utility Bill / Proof of Address", value=pre("utility", False))
+        flag_document_3 = doc_biz_reg or doc_bank_stmt or doc_tin or doc_utility
 
     st.markdown("---")
 
@@ -981,7 +1176,7 @@ else:
                 <div style="font-size:20px;font-weight:700;color:{risk_color};margin-top:6px">
                     {risk_label}
                 </div>
-                <div style="font-size:11px;color:#888;margin-top:4px">
+                <div style="font-size:11px;color:#8BA3BF;margin-top:4px">
                     Policy: {int(medium_threshold*100)}% / {int(high_threshold*100)}%
                 </div>
             </div>
@@ -990,7 +1185,7 @@ else:
         with r2:
             st.markdown(f"""
             <div class="metric-card">
-                <div style="font-size:12px;color:#888;margin-bottom:4px">Default Probability</div>
+                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Default Probability</div>
                 <div style="font-size:36px;font-weight:700;color:{risk_color}">{probability*100:.1f}%</div>
                 <div style="font-size:11px;color:#aaa;margin-top:2px">
                     Model: {raw_probability*100:.1f}% + context adjustments
@@ -1002,7 +1197,7 @@ else:
             ci_color = "#E24B4A" if credit_income > 5 else "#F0A500" if credit_income > 3 else "#1D9E75"
             st.markdown(f"""
             <div class="metric-card">
-                <div style="font-size:12px;color:#888;margin-bottom:4px">Loan-to-Income Ratio</div>
+                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Loan-to-Income Ratio</div>
                 <div style="font-size:36px;font-weight:700;color:{ci_color}">{credit_income:.1f}x</div>
             </div>
             """, unsafe_allow_html=True)
@@ -1011,7 +1206,7 @@ else:
             bureau_color = "#E24B4A" if ext_avg < 0.35 else "#F0A500" if ext_avg < 0.55 else "#1D9E75"
             st.markdown(f"""
             <div class="metric-card">
-                <div style="font-size:12px;color:#888;margin-bottom:4px">Avg Credit Bureau Score</div>
+                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Avg Credit Bureau Score</div>
                 <div style="font-size:36px;font-weight:700;color:{bureau_color}">{ext_avg:.2f}</div>
             </div>
             """, unsafe_allow_html=True)
@@ -1107,11 +1302,11 @@ else:
                 "🟢 Strong — Low Risk"
             )
             st.markdown(f"""
-            <div style="background:white;border-radius:10px;padding:16px;
-                        border-left:4px solid #2E75B6;box-shadow:0 2px 6px rgba(0,0,0,0.06)">
-                <div style="font-size:12px;color:#888;margin-bottom:4px">Credit Bureau History</div>
-                <div style="font-size:24px;font-weight:700;color:#1F3864">{ext_avg:.2f} / 1.00</div>
-                <div style="font-size:13px;color:#444;margin-top:6px">{bureau_status}</div>
+            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:16px;
+                        border-left:4px solid #2E75B6;box-shadow:0 0 20px rgba(0,212,255,0.08)">
+                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Credit Bureau History</div>
+                <div style="font-size:24px;font-weight:700;color:#F0F6FF">{ext_avg:.2f} / 1.00</div>
+                <div style="font-size:13px;color:#C8D8E8;margin-top:6px">{bureau_status}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1123,11 +1318,11 @@ else:
                 "🟢 Manageable — Acceptable"
             )
             st.markdown(f"""
-            <div style="background:white;border-radius:10px;padding:16px;
-                        border-left:4px solid {debt_color};box-shadow:0 2px 6px rgba(0,0,0,0.06)">
-                <div style="font-size:12px;color:#888;margin-bottom:4px">Loan-to-Income Ratio</div>
+            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:16px;
+                        border-left:4px solid {debt_color};box-shadow:0 0 20px rgba(0,212,255,0.08)">
+                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Loan-to-Income Ratio</div>
                 <div style="font-size:24px;font-weight:700;color:{debt_color}">{credit_income:.1f}x annual income</div>
-                <div style="font-size:13px;color:#444;margin-top:6px">{debt_status}</div>
+                <div style="font-size:13px;color:#C8D8E8;margin-top:6px">{debt_status}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1139,11 +1334,11 @@ else:
                 "🟢 Stable — 3+ Years"
             )
             st.markdown(f"""
-            <div style="background:white;border-radius:10px;padding:16px;
-                        border-left:4px solid {emp_color};box-shadow:0 2px 6px rgba(0,0,0,0.06)">
-                <div style="font-size:12px;color:#888;margin-bottom:4px">Employment Stability</div>
+            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:16px;
+                        border-left:4px solid {emp_color};box-shadow:0 0 20px rgba(0,212,255,0.08)">
+                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Employment Stability</div>
                 <div style="font-size:24px;font-weight:700;color:{emp_color}">{employment_years} yrs — {income_type}</div>
-                <div style="font-size:13px;color:#444;margin-top:6px">{employ_status}</div>
+                <div style="font-size:13px;color:#C8D8E8;margin-top:6px">{employ_status}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1160,12 +1355,12 @@ else:
                 "🔴 Recent — High Weight"
             )
             st.markdown(f"""
-            <div style="background:white;border-radius:10px;padding:16px;
-                        border-left:4px solid {delinq_color};box-shadow:0 2px 6px rgba(0,0,0,0.06)">
-                <div style="font-size:12px;color:#888;margin-bottom:4px">Default History</div>
+            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:16px;
+                        border-left:4px solid {delinq_color};box-shadow:0 0 20px rgba(0,212,255,0.08)">
+                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Default History</div>
                 <div style="font-size:18px;font-weight:700;color:{delinq_color}">{delinquency_recency}</div>
-                <div style="font-size:13px;color:#444;margin-top:6px">{delinq_status}</div>
-                <div style="font-size:12px;color:#888;margin-top:4px">{active_loans} active loan(s)</div>
+                <div style="font-size:13px;color:#C8D8E8;margin-top:6px">{delinq_status}</div>
+                <div style="font-size:12px;color:#8BA3BF;margin-top:4px">{active_loans} active loan(s)</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1178,31 +1373,31 @@ else:
         with rec_col1:
             if probability >= high_threshold:
                 st.markdown(f"""
-                <div style="background:#FFF0F0;border-radius:10px;padding:18px;border-left:5px solid #E24B4A">
+                <div style="background:linear-gradient(135deg,rgba(255,69,96,0.1),rgba(255,69,96,0.04));border-radius:10px;padding:18px;border-left:4px solid #FF4560">
                     <div style="font-size:15px;font-weight:700;color:#E24B4A;margin-bottom:8px">
                         ❌ Recommendation: DECLINE or REFER
                     </div>
-                    <div style="font-size:14px;color:#333;line-height:1.7">
+                    <div style="font-size:14px;color:#C8D8E8;line-height:1.7">
                         Default probability exceeds your institution's threshold of {int(high_threshold*100)}%.
                         If referral is considered, require collateral, guarantor, or significant loan reduction
                         before re-assessment.<br><br>
-                        <em style="color:#888">Credit committee review is recommended before communicating
+                        <em style="color:#8BA3BF">Credit committee review is recommended before communicating
                         a final decline to the borrower.</em>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
             elif probability >= medium_threshold:
                 st.markdown(f"""
-                <div style="background:#FFFBF0;border-radius:10px;padding:18px;border-left:5px solid #F0A500">
+                <div style="background:linear-gradient(135deg,rgba(255,183,0,0.1),rgba(255,183,0,0.04));border-radius:10px;padding:18px;border-left:4px solid #FFB700">
                     <div style="font-size:15px;font-weight:700;color:#B8860B;margin-bottom:8px">
                         ⚡ Recommendation: CONDITIONAL APPROVAL
                     </div>
-                    <div style="font-size:14px;color:#333;line-height:1.7">
+                    <div style="font-size:14px;color:#C8D8E8;line-height:1.7">
                         Score falls within your institution's review band
                         ({int(medium_threshold*100)}–{int(high_threshold*100)}%).
                         Consider reducing loan amount, shortening repayment term, or requesting
                         additional supporting documents before final approval.<br><br>
-                        <em style="color:#888">Loan officer judgement is critical at this threshold —
+                        <em style="color:#8BA3BF">Loan officer judgement is critical at this threshold —
                         local market knowledge, guarantor assessment, and business site visit
                         should inform the final decision.</em>
                     </div>
@@ -1210,15 +1405,15 @@ else:
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
-                <div style="background:#F0FFF4;border-radius:10px;padding:18px;border-left:5px solid #1D9E75">
+                <div style="background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(0,229,160,0.04));border-radius:10px;padding:18px;border-left:4px solid #00E5A0">
                     <div style="font-size:15px;font-weight:700;color:#1D9E75;margin-bottom:8px">
                         ✅ Recommendation: APPROVE
                     </div>
-                    <div style="font-size:14px;color:#333;line-height:1.7">
+                    <div style="font-size:14px;color:#C8D8E8;line-height:1.7">
                         Risk profile is within your institution's acceptable threshold of
                         {int(medium_threshold*100)}%.
                         Proceed with standard loan processing and documentation verification.<br><br>
-                        <em style="color:#888">Loan officer should verify income source, confirm
+                        <em style="color:#8BA3BF">Loan officer should verify income source, confirm
                         documentation, and apply institutional credit policy before final approval.</em>
                     </div>
                 </div>
@@ -1226,65 +1421,65 @@ else:
 
         with rec_col2:
             st.markdown(f"""
-            <div style="background:white;border-radius:10px;padding:18px;
-                        border:0.5px solid #D6E4F0;box-shadow:0 2px 6px rgba(0,0,0,0.05)">
-                <div style="font-size:15px;font-weight:700;color:#1F3864;margin-bottom:12px;
+            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:18px;
+                        border:1px solid rgba(0,212,255,0.15);box-shadow:0 0 20px rgba(0,212,255,0.08)">
+                <div style="font-size:11px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;
                             border-bottom:2px solid #2E75B6;padding-bottom:6px">
                     Summary for Credit File
                 </div>
                 <table style="width:100%;font-size:13px;border-collapse:collapse">
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Borrower Age</td>
-                        <td style="padding:6px 0;font-weight:600;color:#1F3864;text-align:right">{age} years</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Borrower Age</td>
+                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">{age} years</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Annual Income</td>
-                        <td style="padding:6px 0;font-weight:600;color:#1F3864;text-align:right">₦{income:,}</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Annual Income</td>
+                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">₦{income:,}</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Loan Requested</td>
-                        <td style="padding:6px 0;font-weight:600;color:#1F3864;text-align:right">₦{loan_amount:,}</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Loan Requested</td>
+                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">₦{loan_amount:,}</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Monthly Repayment</td>
-                        <td style="padding:6px 0;font-weight:600;color:#1F3864;text-align:right">₦{annuity:,}</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Monthly Repayment</td>
+                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">₦{annuity:,}</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Employment Sector</td>
-                        <td style="padding:6px 0;font-weight:600;color:#1F3864;text-align:right">{employment_sector}</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Employment Sector</td>
+                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">{employment_sector}</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Income Type</td>
-                        <td style="padding:6px 0;font-weight:600;color:#1F3864;text-align:right">{income_type}</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Income Type</td>
+                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">{income_type}</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Default History</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Default History</td>
                         <td style="padding:6px 0;font-weight:600;color:{delinq_color};text-align:right">{delinquency_recency}</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Active Loans</td>
-                        <td style="padding:6px 0;font-weight:600;color:#1F3864;text-align:right">{active_loans}</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Active Loans</td>
+                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">{active_loans}</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Loan-to-Income</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Loan-to-Income</td>
                         <td style="padding:6px 0;font-weight:600;color:{ci_color};text-align:right">{credit_income:.1f}x</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Avg Bureau Score</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Avg Bureau Score</td>
                         <td style="padding:6px 0;font-weight:600;color:{bureau_color};text-align:right">{ext_avg:.2f} / 1.00</td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">BVN Verified</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">BVN Verified</td>
                         <td style="padding:6px 0;font-weight:600;color:{'#1D9E75' if bvn_bureau_verified else '#F0A500'};text-align:right">
                             {'✅ Yes' if bvn_bureau_verified else '⚠️ No'}
                         </td>
                     </tr>
-                    <tr style="border-bottom:1px solid #f0f0f0">
-                        <td style="padding:6px 0;color:#888">Model Score</td>
+                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
+                        <td style="padding:6px 0;color:#8BA3BF">Model Score</td>
                         <td style="padding:6px 0;font-weight:600;color:{risk_color};text-align:right">{probability*100:.1f}% default probability</td>
                     </tr>
                     <tr>
-                        <td style="padding:6px 0;color:#888">Risk Category</td>
+                        <td style="padding:6px 0;color:#8BA3BF">Risk Category</td>
                         <td style="padding:6px 0;font-weight:700;color:{risk_color};text-align:right">{risk_label}</td>
                     </tr>
                 </table>
