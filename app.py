@@ -228,12 +228,11 @@ st.markdown("""
 @st.cache_resource
 def load_model():
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    models_dir = os.path.join(base_dir, 'models')
     model = joblib.load(
-        os.path.join(models_dir, 'xgb_model_no_gender.pkl')
+        os.path.join(base_dir, 'xgb_model_no_gender.pkl')
     )
     feature_names = joblib.load(
-        os.path.join(models_dir, 'feature_names_no_gender.pkl')
+        os.path.join(base_dir, 'feature_names_no_gender.pkl')
     )
     return model, feature_names
 
@@ -360,7 +359,7 @@ with st.sidebar:
     if "Loan Officer" in view_mode:
         st.markdown("""
         This tool uses a machine learning model trained on
-        **1,600,000 real Nigerian loan records** to predict the
+        **1,600,000 real loan applications** to predict the
         probability that a borrower will default.
         """)
         st.markdown("---")
@@ -1302,7 +1301,7 @@ st.markdown("""
     Operations & Strategy | Fintech & Credit Risk |
     <a href='https://www.linkedin.com/in/nkpo-ikana-udom-479ba91a9/' target='_blank'>LinkedIn</a> ·
     <a href='https://github.com/stephenudom' target='_blank'>GitHub</a><br>
-    Trained on 1,600,000 Nigerian loan records · XGBoost · SHAP Explainability ·
+    Trained on 1,600,000 loan applications · XGBoost · SHAP Explainability ·
     Gender-Neutral · CBN Fair Lending Compliant · Full Nigerian Market Range ·
     Adjustable Risk Thresholds · BVN-Ready · Dual Interface
 </div>
