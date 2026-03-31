@@ -700,10 +700,11 @@ if "Customer Application" in view_mode:
             c_children = st.number_input("Number of Dependants", 0, 10, 0)
         with c3:
             c_family_members = st.number_input("Total Family Members", 1, 15, 2)
-            c_biz_reg = st.checkbox("📄 Proof of Business Registration")
-            c_bank_stmt = st.checkbox("🏦 6 Months Bank Statement")
-            c_tax_id = st.checkbox("📋 Tax Identification Number (TIN)")
-            c_utility = st.checkbox("🔖 Utility Bill / Proof of Address")
+            st.markdown('<p style="font-size:10px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Supporting Documents</p>', unsafe_allow_html=True)
+            c_biz_reg   = st.file_uploader("📄 Business Registration Certificate", type=["pdf","jpg","jpeg","png"], key="biz_reg_file")
+            c_bank_stmt = st.file_uploader("🏦 6 Months Bank Statement", type=["pdf","jpg","jpeg","png"], key="bank_file")
+            c_tax_id    = st.file_uploader("📋 Tax Identification Number (TIN)", type=["pdf","jpg","jpeg","png"], key="tax_file")
+            c_utility   = st.file_uploader("🔖 Utility Bill / Proof of Address", type=["pdf","jpg","jpeg","png"], key="utility_file")
 
         st.markdown("---")
 
@@ -768,13 +769,15 @@ if "Customer Application" in view_mode:
         st.markdown("---")
 
         # ── SECTION 4: BVN VERIFICATION ──────────
-        st.markdown('<div class="section-header">4. BVN Verification (Recommended)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">4. BVN Verification (Required)</div>', unsafe_allow_html=True)
         st.markdown("""
-        <div style='background:#EBF4FB;border-radius:8px;padding:12px 16px;
-                    font-size:13px;color:#F0F6FF;margin-bottom:14px;line-height:1.7'>
-            Providing your BVN allows us to verify your identity and retrieve your
-            credit bureau history automatically, speeding up your application review.
-            Your BVN will not be stored beyond what is required for this verification.
+        <div style='background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(0,212,255,0.03));
+                    border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:14px 18px;
+                    font-size:12px;color:#C8D8E8;margin-bottom:14px;line-height:1.8;
+                    font-family:Sora,sans-serif'>
+            Your BVN is required to verify your identity and retrieve your credit bureau history.
+            This is a <strong style="color:#00D4FF">soft enquiry only</strong> and will not affect your credit score.
+            Your BVN is encrypted and used solely for this application.
         </div>
         """, unsafe_allow_html=True)
 
@@ -826,13 +829,21 @@ if "Customer Application" in view_mode:
                     "education": c_education,
                     "children": c_children,
                     "family_members": c_family_members,
-                    "biz_reg": c_biz_reg,
-                    "bank_stmt": c_bank_stmt,
-                    "tax_id": c_tax_id,
-                    "utility": c_utility,
+                    "biz_reg": c_biz_reg is not None,
+                    "bank_stmt": c_bank_stmt is not None,
+                    "tax_id": c_tax_id is not None,
+                    "utility": c_utility is not None,
+                    "biz_reg_file": c_biz_reg.name if c_biz_reg else None,
+                    "bank_stmt_file": c_bank_stmt.name if c_bank_stmt else None,
+                    "tax_id_file": c_tax_id.name if c_tax_id else None,
+                    "utility_file": c_utility.name if c_utility else None,
+                    "biz_reg_bytes": c_biz_reg.read() if c_biz_reg else None,
+                    "bank_stmt_bytes": c_bank_stmt.read() if c_bank_stmt else None,
+                    "tax_id_bytes": c_tax_id.read() if c_tax_id else None,
+                    "utility_bytes": c_utility.read() if c_utility else None,
                     "own_car": False,
                     "own_realty": False,
-                    "flag_document_3": c_biz_reg or c_bank_stmt or c_tax_id or c_utility,
+                    "flag_document_3": any([c_biz_reg, c_bank_stmt, c_tax_id, c_utility]),
                     "employment_sector": c_employment_sector,
                     "income_type": c_income_type,
                     "employment_years": c_employment_years,
@@ -883,20 +894,46 @@ else:
         st.markdown('<div class="section-header">📥 Submitted Applications Inbox</div>', unsafe_allow_html=True)
         st.markdown(f"**{len(st.session_state.submitted_applications)} application(s) awaiting review**")
 
+        # ── APPLICATION CARDS ──────────────────
+        for i, a in enumerate(st.session_state.submitted_applications):
+            docs_submitted = sum([a.get("biz_reg",False), a.get("bank_stmt",False), a.get("tax_id",False), a.get("utility",False)])
+            bvn_badge = "🔵 BVN Verified" if a.get("bvn_provided") else "⚠️ No BVN"
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border:1px solid rgba(0,212,255,0.15);
+                        border-radius:10px;padding:16px 20px;margin-bottom:10px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-size:16px;font-weight:700;color:#F0F6FF">{a['name']}</div>
+                        <div style="font-size:11px;color:#8BA3BF;margin-top:3px;font-family:Space Mono,monospace">
+                            APP-{i+1:03d} &nbsp;|&nbsp; ₦{a['loan_amount']:,} &nbsp;|&nbsp; {a['employment_sector']} &nbsp;|&nbsp; {bvn_badge}
+                        </div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:11px;color:#00D4FF;font-family:Space Mono,monospace">{docs_submitted}/4 docs</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
         app_options = [
             f"APP-{i+1:03d} — {a['name']} | ₦{a['loan_amount']:,} | {a['employment_sector']}"
             for i, a in enumerate(st.session_state.submitted_applications)
         ]
-        app_options = ["-- Select a submitted application --"] + app_options
-        selected_app = st.selectbox("Load a customer application", app_options)
+        app_options = ["-- Select an application to assess --"] + app_options
+        selected_app = st.selectbox("Open application for full assessment", app_options)
 
-        if selected_app != "-- Select a submitted application --":
+        if selected_app != "-- Select an application to assess --":
             app_idx = int(selected_app.split("APP-")[1].split(" ")[0]) - 1
             loaded = st.session_state.submitted_applications[app_idx]
-            st.success(
-                f"✅ Loaded application from **{loaded['name']}** — "
-                f"{'🔵 Bureau-Verified' if loaded['bvn_provided'] else '⚠️ Self-Reported (No BVN)'}"
-            )
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,rgba(0,229,160,0.08),rgba(0,229,160,0.03));
+                        border:1px solid rgba(0,229,160,0.25);border-radius:8px;padding:12px 18px">
+                <span style="font-size:14px;font-weight:700;color:#00E5A0">✅ Loaded: {loaded['name']}</span>
+                <span style="font-size:11px;color:#8BA3BF;margin-left:12px;font-family:Space Mono,monospace">
+                    {'🔵 Bureau-Verified' if loaded.get('bvn_provided') else '⚠️ Self-Reported — BVN not provided'}
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             loaded = None
         st.markdown("---")
@@ -1064,11 +1101,62 @@ else:
             'Document Verification</p>',
             unsafe_allow_html=True
         )
-        doc_biz_reg   = st.checkbox("📄 Business Registration Submitted", value=pre("biz_reg", False))
-        doc_bank_stmt = st.checkbox("🏦 6-Month Bank Statement Submitted", value=pre("bank_stmt", False))
-        doc_tin       = st.checkbox("📋 TIN / Tax Document Submitted", value=pre("tax_id", False))
-        doc_utility   = st.checkbox("🔖 Utility Bill / Proof of Address", value=pre("utility", False))
-        flag_document_3 = doc_biz_reg or doc_bank_stmt or doc_tin or doc_utility
+        doc_biz_reg   = pre("biz_reg", False)
+        doc_bank_stmt = pre("bank_stmt", False)
+        doc_tin       = pre("tax_id", False)
+        doc_utility   = pre("utility", False)
+        flag_document_3 = any([doc_biz_reg, doc_bank_stmt, doc_tin, doc_utility])
+
+        # ── DOCUMENT STATUS PANEL ──────────────
+        docs_info = [
+            ("📄 Business Registration", doc_biz_reg, pre("biz_reg_file", None)),
+            ("🏦 6-Month Bank Statement", doc_bank_stmt, pre("bank_stmt_file", None)),
+            ("📋 TIN / Tax Document", doc_tin, pre("tax_id_file", None)),
+            ("🔖 Utility Bill / Proof of Address", doc_utility, pre("utility_file", None)),
+        ]
+        # ── DOCUMENT STATUS + DOWNLOAD ─────────
+        st.markdown('''
+        <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border:1px solid rgba(0,212,255,0.15);
+                    border-radius:10px;padding:14px 18px;margin-top:8px;margin-bottom:8px">
+            <div style="font-size:10px;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;
+                        letter-spacing:0.12em;margin-bottom:10px;font-weight:700">Document Verification Panel</div>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        doc_keys = [
+            ("📄 Business Registration", "biz_reg", "biz_reg_file", "biz_reg_bytes"),
+            ("🏦 6-Month Bank Statement", "bank_stmt", "bank_stmt_file", "bank_stmt_bytes"),
+            ("📋 TIN / Tax Document", "tax_id", "tax_id_file", "tax_id_bytes"),
+            ("🔖 Utility Bill / Address", "utility", "utility_file", "utility_bytes"),
+        ]
+        for label, submitted_key, file_key, bytes_key in doc_keys:
+            submitted = pre(submitted_key, False)
+            filename  = pre(file_key, None)
+            filebytes = pre(bytes_key, None)
+            dcol1, dcol2 = st.columns([3, 1])
+            with dcol1:
+                if submitted and filename:
+                    st.markdown(f'''<div style="padding:8px 0;font-size:12px;color:#C8D8E8">
+                        <span style="color:#00E5A0;font-weight:700">✅ {label}</span>
+                        <span style="color:#8BA3BF;font-size:11px;margin-left:8px;font-family:Space Mono,monospace">{filename}</span>
+                    </div>''', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'''<div style="padding:8px 0;font-size:12px">
+                        <span style="color:#FF4560;font-weight:700">⚠ {label}</span>
+                        <span style="color:#8BA3BF;font-size:11px;margin-left:8px">Not uploaded</span>
+                    </div>''', unsafe_allow_html=True)
+            with dcol2:
+                if filebytes and filename:
+                    ext = filename.split(".")[-1].lower()
+                    mime = "application/pdf" if ext == "pdf" else f"image/{ext}"
+                    st.download_button(
+                        label="⬇ Download",
+                        data=filebytes,
+                        file_name=filename,
+                        mime=mime,
+                        key=f"dl_{bytes_key}_{pre('name','applicant')}",
+                        use_container_width=True
+                    )
 
     st.markdown("---")
 
