@@ -673,17 +673,11 @@ step_names = ["Personal Details", "Employment & Income", "Loan Request", "Docume
 cols = st.columns([0.32, 1.0])
 with cols[0]:
   st.markdown('<div class="sidebar">', unsafe_allow_html=True)
-  # Try to load letterhead logo and contact details
-  logo_img, contacts = load_letterhead_image_and_contacts()
-  if logo_img:
-    # display image (first page of letterhead) as logo
-    try:
-      st.image(logo_img, width=64)
-    except Exception:
-      # fallback to the SVG block if image rendering fails
-      st.markdown('<div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm0 14c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-2-6.5l1.5 1.5 3-3"/></svg></div>', unsafe_allow_html=True)
-  else:
-    st.markdown('<div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm0 14c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-2-6.5l1.5 1.5 3-3"/></svg></div>', unsafe_allow_html=True)
+  # Load contact details from letterhead PDF if available, but do not render the PDF image here
+  # (PDF-to-image rendering caused layout issues). We will always show the in-app SVG logo instead.
+  _ , contacts = load_letterhead_image_and_contacts()
+  # Always use the embedded SVG logo to ensure consistent layout
+  st.markdown('<div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm0 14c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-2-6.5l1.5 1.5 3-3"/></svg></div>', unsafe_allow_html=True)
 
   # Company name and subtitle from contacts (fallbacks provided)
   st.markdown(f"<div class=\"logo-brand\">{contacts.get('company','Joyful Smile Nigeria Limited')}</div>", unsafe_allow_html=True)
