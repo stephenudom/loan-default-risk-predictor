@@ -1,1591 +1,1418 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import joblib
-import shap
-import matplotlib.pyplot as plt
-import matplotlib
-import os
-matplotlib.use('Agg')
-
-# ─────────────────────────────────────────
-# PAGE CONFIG
-# ─────────────────────────────────────────
-st.set_page_config(
-    page_title="Loan Default Risk Predictor",
-    page_icon="🏦",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# ─────────────────────────────────────────
-# CUSTOM CSS
-# ─────────────────────────────────────────
-st.markdown("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loan Application — Joyful Smile Nigeria Limited</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&family=Libre+Baskerville:ital@1&display=swap" rel="stylesheet">
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-    /* ── ROOT VARIABLES ── */
-    :root {
-        --navy:      #050D1A;
-        --navy-2:    #0A1628;
-        --navy-3:    #0F1F3D;
-        --navy-4:    #162845;
-        --electric:  #00D4FF;
-        --electric-2:#0099CC;
-        --gold:      #FFB700;
-        --green:     #00E5A0;
-        --red:       #FF4560;
-        --amber:     #FFB700;
-        --white:     #F0F6FF;
-        --muted:     #8BA3BF;
-        --border:    rgba(0, 212, 255, 0.15);
-        --glow:      0 0 20px rgba(0, 212, 255, 0.15);
-    }
-
-    /* ── BASE ── */
-    html, body, [class*="css"] {
-        font-family: 'Sora', sans-serif !important;
-        background-color: var(--navy) !important;
-        color: var(--white) !important;
-    }
-
-    .main {
-        background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 50%, #060E1F 100%) !important;
-        background-attachment: fixed !important;
-    }
-
-    /* ── GRID TEXTURE OVERLAY ── */
-    .main::before {
-        content: '';
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-image:
-            linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
-        background-size: 40px 40px;
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    /* ── SIDEBAR ── */
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, var(--navy-3) 0%, var(--navy-2) 100%) !important;
-        border-right: 1px solid var(--border) !important;
-    }
-    section[data-testid="stSidebar"] > div {
-        background: transparent !important;
-    }
-    section[data-testid="stSidebar"] * {
-        color: var(--white) !important;
-    }
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
-        font-family: 'Space Mono', monospace !important;
-        color: var(--electric) !important;
-        letter-spacing: 0.05em;
-        font-size: 13px !important;
-        text-transform: uppercase;
-    }
-    section[data-testid="stSidebar"] a {
-        color: var(--electric) !important;
-        text-decoration: none;
-    }
-    section[data-testid="stSidebar"] a:hover {
-        color: var(--gold) !important;
-    }
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] li {
-        font-size: 12px !important;
-        color: var(--muted) !important;
-        line-height: 1.8 !important;
-    }
-
-    /* ── LABELS ── */
-    .stSlider label,
-    .stNumberInput label,
-    .stSelectbox label,
-    .stCheckbox label,
-    .stTextInput label,
-    .stRadio label {
-        color: var(--electric) !important;
-        font-size: 11px !important;
-        font-weight: 600 !important;
-        font-family: 'Space Mono', monospace !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.08em !important;
-    }
-
-    /* ── INPUTS ── */
-    .stSelectbox div[data-baseweb="select"] > div,
-    .stNumberInput div[data-baseweb="input"],
-    div[data-baseweb="input"] {
-        background-color: var(--navy-3) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 6px !important;
-        color: var(--white) !important;
-    }
-    .stNumberInput input,
-    div[data-baseweb="input"] input,
-    input[type="number"],
-    input[type="text"] {
-        color: var(--white) !important;
-        background-color: var(--navy-3) !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        font-size: 13px !important;
-        -webkit-text-fill-color: var(--white) !important;
-    }
-    div[data-baseweb="select"] span,
-    div[data-baseweb="select"] div {
-        background-color: var(--navy-3) !important;
-        color: var(--white) !important;
-        font-family: 'Sora', sans-serif !important;
-    }
-
-    /* ── SLIDERS ── */
-    .stSlider [data-baseweb="slider"] div[role="slider"] {
-        background-color: var(--electric) !important;
-        border: 2px solid var(--navy) !important;
-        box-shadow: 0 0 8px var(--electric) !important;
-    }
-
-    /* ── CHECKBOXES ── */
-    .stCheckbox > label > div:first-child {
-        background-color: var(--navy-3) !important;
-        border: 2px solid var(--electric) !important;
-        border-radius: 4px !important;
-    }
-    .stCheckbox > label > div:last-child,
-    .stCheckbox span {
-        color: var(--white) !important;
-        font-size: 12px !important;
-        font-family: 'Sora', sans-serif !important;
-    }
-
-    /* ── BUTTONS ── */
-    .stButton > button {
-        background: linear-gradient(135deg, var(--electric-2), var(--electric)) !important;
-        color: var(--navy) !important;
-        border-radius: 6px !important;
-        padding: 12px 30px !important;
-        font-size: 13px !important;
-        font-weight: 700 !important;
-        font-family: 'Space Mono', monospace !important;
-        letter-spacing: 0.1em !important;
-        text-transform: uppercase !important;
-        border: none !important;
-        width: 100% !important;
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.3) !important;
-        transition: all 0.2s ease !important;
-    }
-    .stButton > button:hover {
-        box-shadow: 0 0 30px rgba(0, 212, 255, 0.6) !important;
-        transform: translateY(-1px) !important;
-    }
-
-    /* ── WARNINGS / INFO ── */
-    .stWarning, div[data-testid="stAlert"] {
-        background: rgba(255, 183, 0, 0.08) !important;
-        border: 1px solid rgba(255, 183, 0, 0.3) !important;
-        border-radius: 8px !important;
-        color: var(--white) !important;
-    }
-    .stInfo, [data-baseweb="notification"] {
-        background: rgba(0, 212, 255, 0.06) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
-    }
-
-    /* ── HEADINGS ── */
-    h1 {
-        font-family: 'Sora', sans-serif !important;
-        font-weight: 800 !important;
-        font-size: 32px !important;
-        color: var(--white) !important;
-        letter-spacing: -0.02em !important;
-    }
-    h2 {
-        font-family: 'Sora', sans-serif !important;
-        font-weight: 700 !important;
-        color: var(--white) !important;
-    }
-    h3 {
-        font-family: 'Space Mono', monospace !important;
-        font-size: 12px !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.1em !important;
-        color: var(--electric) !important;
-    }
-
-    /* ── METRIC CARDS ── */
-    .metric-card {
-        background: linear-gradient(135deg, var(--navy-3), var(--navy-4));
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        border: 1px solid var(--border);
-        box-shadow: var(--glow);
-    }
-
-    /* ── RISK CARDS ── */
-    .risk-high {
-        background: linear-gradient(135deg, rgba(255,69,96,0.12), rgba(255,69,96,0.05));
-        border-left: 4px solid var(--red);
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 0 20px rgba(255,69,96,0.15);
-    }
-    .risk-medium {
-        background: linear-gradient(135deg, rgba(255,183,0,0.12), rgba(255,183,0,0.05));
-        border-left: 4px solid var(--amber);
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 0 20px rgba(255,183,0,0.15);
-    }
-    .risk-low {
-        background: linear-gradient(135deg, rgba(0,229,160,0.12), rgba(0,229,160,0.05));
-        border-left: 4px solid var(--green);
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 0 20px rgba(0,229,160,0.15);
-    }
-
-    /* ── SECTION HEADERS ── */
-    .section-header {
-        font-family: 'Space Mono', monospace !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: var(--electric) !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.15em !important;
-        margin-bottom: 14px !important;
-        padding-bottom: 8px !important;
-        border-bottom: 1px solid var(--border) !important;
-    }
-
-    /* ── INSIGHT / DISCLAIMER BOXES ── */
-    .insight-box {
-        background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,212,255,0.03));
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 16px;
-        font-size: 13px;
-        color: var(--white);
-        margin-top: 10px;
-        line-height: 1.8;
-        font-family: 'Sora', sans-serif;
-    }
-    .disclaimer-box {
-        background: rgba(255,183,0,0.06);
-        border-left: 3px solid var(--amber);
-        border-radius: 8px;
-        padding: 12px 16px;
-        font-size: 12px;
-        color: #D4A800;
-        margin-top: 10px;
-        line-height: 1.7;
-        font-family: 'Sora', sans-serif;
-    }
-
-    /* ── BADGES ── */
-    .verified-badge {
-        background: rgba(0,229,160,0.12);
-        border: 1px solid var(--green);
-        border-radius: 20px;
-        padding: 4px 14px;
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--green);
-        display: inline-block;
-        font-family: 'Space Mono', monospace;
-        letter-spacing: 0.05em;
-    }
-    .unverified-badge {
-        background: rgba(255,183,0,0.08);
-        border: 1px solid var(--amber);
-        border-radius: 20px;
-        padding: 4px 14px;
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--amber);
-        display: inline-block;
-        font-family: 'Space Mono', monospace;
-        letter-spacing: 0.05em;
-    }
-
-    /* ── MODE BANNERS ── */
-    .mode-banner-officer {
-        background: linear-gradient(135deg, var(--navy-3), var(--navy-4));
-        border: 1px solid var(--border);
-        border-left: 3px solid var(--electric);
-        color: var(--white);
-        border-radius: 8px;
-        padding: 12px 20px;
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 16px;
-        font-family: 'Space Mono', monospace;
-    }
-    .mode-banner-customer {
-        background: linear-gradient(135deg, rgba(0,229,160,0.1), rgba(0,229,160,0.04));
-        border: 1px solid rgba(0,229,160,0.3);
-        border-left: 3px solid var(--green);
-        color: var(--white);
-        border-radius: 8px;
-        padding: 12px 20px;
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 16px;
-    }
-
-    /* ── FOOTER ── */
-    .footer {
-        text-align: center;
-        color: var(--muted);
-        font-size: 11px;
-        font-family: 'Space Mono', monospace;
-        letter-spacing: 0.05em;
-        margin-top: 60px;
-        padding-top: 20px;
-        border-top: 1px solid var(--border);
-    }
-    .footer a {
-        color: var(--electric) !important;
-        text-decoration: none;
-    }
-
-    /* ── DIVIDERS ── */
-    hr {
-        border-color: var(--border) !important;
-    }
-
-    /* ── RADIO BUTTONS ── */
-    .stRadio > div {
-        background: var(--navy-3) !important;
-        border-radius: 8px !important;
-        padding: 8px !important;
-        border: 1px solid var(--border) !important;
-    }
-
-    /* ── SELECTBOX DROPDOWN ── */
-    ul[data-baseweb="menu"] {
-        background: var(--navy-3) !important;
-        border: 1px solid var(--border) !important;
-    }
-    li[role="option"]:hover {
-        background: var(--navy-4) !important;
-    }
-
-    /* ── NUMBER INPUT BUTTONS ── */
-    .stNumberInput div[data-baseweb="input"] > div,
-    .stNumberInput button {
-        background-color: var(--navy-4) !important;
-        color: var(--electric) !important;
-        border: 1px solid var(--border) !important;
-    }
-
-    /* ── SUCCESS/ERROR BOXES ── */
-    .stSuccess {
-        background: rgba(0,229,160,0.08) !important;
-        border: 1px solid rgba(0,229,160,0.3) !important;
-        border-radius: 8px !important;
-    }
-    .stError {
-        background: rgba(255,69,96,0.08) !important;
-        border: 1px solid rgba(255,69,96,0.3) !important;
-        border-radius: 8px !important;
-    }
-
-    /* ── SPINNER ── */
-    .stSpinner > div {
-        border-top-color: var(--electric) !important;
-    }
-
-    /* scrollbar */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: var(--navy); }
-    ::-webkit-scrollbar-thumb { background: var(--electric-2); border-radius: 2px; }
-
-</style>
-""", unsafe_allow_html=True)
-
-
-# ─────────────────────────────────────────
-# LOAD MODEL
-# ─────────────────────────────────────────
-@st.cache_resource
-def load_model():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    model = joblib.load(
-        os.path.join(base_dir, 'xgb_model_no_gender.pkl')
-    )
-    feature_names = joblib.load(
-        os.path.join(base_dir, 'feature_names_no_gender.pkl')
-    )
-    return model, feature_names
-
-model, feature_names = load_model()
-
-
-# ─────────────────────────────────────────
-# FEATURE LABEL MAP
-# ─────────────────────────────────────────
-FEATURE_LABELS = {
-    'EXT_SOURCE_MEAN':              'Credit Bureau Score (Average)',
-    'EXT_SOURCE_2':                 'Credit Bureau Score 2',
-    'EXT_SOURCE_3':                 'Credit Bureau Score 3',
-    'EXT_SOURCE_1':                 'Credit Bureau Score 1',
-    'EXT_SOURCE_MIN':               'Credit Bureau Score (Weakest)',
-    'CREDIT_INCOME_RATIO':          'Loan-to-Income Ratio',
-    'ANNUITY_INCOME_RATIO':         'Monthly Repayment Burden',
-    'CREDIT_TERM_YEARS':            'Loan Repayment Duration',
-    'AMT_CREDIT':                   'Loan Amount (₦)',
-    'AMT_INCOME_TOTAL':             'Annual Income (₦)',
-    'AMT_ANNUITY':                  'Monthly Annuity (₦)',
-    'AMT_GOODS_PRICE':              'Asset / Goods Value (₦)',
-    'AGE_YEARS':                    'Borrower Age (Years)',
-    'DAYS_BIRTH':                   'Borrower Age',
-    'EMPLOYMENT_YEARS':             'Years in Employment',
-    'DAYS_EMPLOYED':                'Employment Duration',
-    'EMPLOYMENT_AGE_RATIO':         'Employment Stability Index',
-    'INCOME_PER_PERSON':            'Income Per Family Member (₦)',
-    'CNT_CHILDREN':                 'Number of Dependants',
-    'CNT_FAM_MEMBERS':              'Total Family Size',
-    'FLAG_OWN_CAR':                 'Business Registration',
-    'FLAG_OWN_REALTY':              'Bank Statement Submitted',
-    'FLAG_DOCUMENT_3':              'Key Documents Submitted',
-    'NAME_CONTRACT_TYPE':           'Loan Type (Revolving)',
-    'NAME_FAMILY_STATUS_Married':   'Marital Status (Married)',
-    'NAME_EDUCATION_TYPE_Higher education': 'Education (Tertiary)',
-    'DAYS_ID_PUBLISH':              'ID Document Age (Days)',
-    'REGION_RATING_CLIENT':         'Region Risk Rating',
-    'REGION_RATING_CLIENT_W_CITY':  'City Region Risk Rating',
+:root{
+  --navy:#0B1F3A;
+  --navy-mid:#122540;
+  --navy-light:#1A3457;
+  --teal:#009B8D;
+  --teal-light:#00B8A8;
+  --teal-pale:#E6F7F6;
+  --gold:#C8A44A;
+  --gold-light:#E2C070;
+  --white:#FFFFFF;
+  --off-white:#F8FAFB;
+  --text-primary:#0B1F3A;
+  --text-secondary:#4A6480;
+  --text-muted:#7A94AC;
+  --border:#D4E1ED;
+  --border-focus:#009B8D;
+  --error:#C0392B;
+  --error-bg:#FDF2F1;
+  --success:#0F7B6C;
+  --success-bg:#E6F7F4;
+  --shadow-sm:0 1px 4px rgba(11,31,58,0.08);
+  --shadow-md:0 4px 16px rgba(11,31,58,0.10);
+  --shadow-lg:0 8px 32px rgba(11,31,58,0.12);
+  --radius:8px;
+  --radius-lg:12px;
+  --radius-xl:16px;
 }
 
+body{
+  font-family:'DM Sans',sans-serif;
+  font-size:15px;
+  line-height:1.6;
+  background:var(--off-white);
+  color:var(--text-primary);
+  min-height:100vh;
+}
 
-# ─────────────────────────────────────────
-# HELPER FUNCTIONS
-# ─────────────────────────────────────────
-def get_risk_label(probability, medium_threshold=0.3, high_threshold=0.6):
-    if probability >= high_threshold:
-        return "HIGH RISK", "#E24B4A", "risk-high", "🔴"
-    elif probability >= medium_threshold:
-        return "MEDIUM RISK", "#F0A500", "risk-medium", "🟡"
-    else:
-        return "LOW RISK", "#1D9E75", "risk-low", "🟢"
+/* ── LAYOUT ── */
+.app-shell{display:flex;min-height:100vh}
 
+.sidebar{
+  width:320px;
+  flex-shrink:0;
+  background:var(--navy);
+  position:sticky;
+  top:0;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  padding:40px 32px;
+  overflow:hidden;
+}
 
-def build_input_dataframe(inputs, feature_names):
-    row = pd.DataFrame([{f: 0 for f in feature_names}])
-    for key, value in inputs.items():
-        if key in row.columns:
-            row[key] = value
-    return row
+.sidebar::before{
+  content:'';
+  position:absolute;
+  top:-80px;right:-80px;
+  width:260px;height:260px;
+  border-radius:50%;
+  border:1px solid rgba(0,155,141,0.15);
+  pointer-events:none;
+}
+.sidebar::after{
+  content:'';
+  position:absolute;
+  bottom:-60px;left:-60px;
+  width:200px;height:200px;
+  border-radius:50%;
+  border:1px solid rgba(200,164,74,0.12);
+  pointer-events:none;
+}
 
+.logo-area{margin-bottom:40px}
+.logo-icon{
+  width:52px;height:52px;
+  background:var(--teal);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:14px;
+}
+.logo-icon svg{width:28px;height:28px;fill:white}
+.logo-brand{
+  font-family:'Cormorant Garamond',serif;
+  font-size:22px;font-weight:600;
+  color:var(--white);
+  line-height:1.2;
+}
+.logo-sub{
+  font-size:11px;color:rgba(255,255,255,0.45);
+  letter-spacing:0.12em;text-transform:uppercase;
+  margin-top:3px;font-weight:500;
+}
 
-def get_label(feature):
-    return FEATURE_LABELS.get(feature, feature.replace('_', ' ').title())
+.sidebar-tagline{
+  font-family:'Cormorant Garamond',serif;
+  font-style:italic;
+  font-size:17px;
+  color:rgba(255,255,255,0.55);
+  line-height:1.6;
+  margin-bottom:40px;
+  padding-bottom:32px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
 
+/* Steps nav */
+.steps-nav{flex:1}
+.step-item{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:12px 0;cursor:pointer;
+}
+.step-item:not(:last-child){
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.step-num{
+  width:30px;height:30px;flex-shrink:0;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:600;
+  border:1.5px solid rgba(255,255,255,0.2);
+  color:rgba(255,255,255,0.4);
+  transition:all 0.2s;
+  margin-top:1px;
+}
+.step-item.active .step-num{
+  background:var(--teal);border-color:var(--teal);
+  color:white;
+  box-shadow:0 0 0 4px rgba(0,155,141,0.2);
+}
+.step-item.completed .step-num{
+  background:rgba(0,155,141,0.2);border-color:var(--teal);
+  color:var(--teal-light);
+}
+.step-label{font-size:13px;color:rgba(255,255,255,0.35);font-weight:400;line-height:1.3}
+.step-title{font-size:14px;color:rgba(255,255,255,0.5);font-weight:500;margin-bottom:2px}
+.step-item.active .step-title{color:white}
+.step-item.active .step-label{color:rgba(255,255,255,0.55)}
+.step-item.completed .step-title{color:rgba(255,255,255,0.6)}
 
-def delinquency_risk_modifier(delinquency_recency):
-    modifiers = {
-        "Never": 0.0,
-        "5+ years ago": 0.03,
-        "2 to 5 years ago": 0.07,
-        "Within the last 2 years": 0.14
-    }
-    return modifiers.get(delinquency_recency, 0.0)
+.sidebar-help{
+  margin-top:auto;padding-top:24px;
+  border-top:1px solid rgba(255,255,255,0.08);
+}
+.help-line{font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:4px}
+.help-contact{
+  font-size:13px;color:var(--teal-light);font-weight:500;
+}
 
+/* ── MAIN CONTENT ── */
+.main-content{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
 
-def active_loan_modifier(active_loans):
-    if active_loans == 0:
-        return 0.0
-    elif active_loans <= 2:
-        return 0.02
-    elif active_loans <= 4:
-        return 0.05
-    else:
-        return 0.10
+.top-bar{
+  background:white;
+  border-bottom:1px solid var(--border);
+  padding:16px 48px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.top-bar-left{font-size:13px;color:var(--text-muted)}
+.top-bar-left strong{color:var(--text-primary)}
+.progress-bar-wrap{
+  flex:1;max-width:260px;
+  background:var(--border);border-radius:4px;height:4px;
+  margin:0 24px;overflow:hidden;
+}
+.progress-bar-fill{
+  height:100%;background:var(--teal);border-radius:4px;
+  transition:width 0.4s ease;
+}
+.progress-label{font-size:12px;color:var(--text-muted)}
 
+.form-area{
+  flex:1;
+  padding:48px 48px 80px;
+  max-width:860px;
+}
 
-def income_stability_modifier(income_type):
-    modifiers = {
-        "Fixed Salary": 0.0,
-        "Business / Self-Employed": 0.03,
-        "Commission-Based": 0.05,
-        "Irregular / Seasonal": 0.08
-    }
-    return modifiers.get(income_type, 0.0)
+/* ── SECTION HEADERS ── */
+.section-eyebrow{
+  font-size:11px;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--teal);font-weight:600;margin-bottom:8px;
+}
+.section-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:32px;font-weight:600;
+  color:var(--navy);line-height:1.2;margin-bottom:8px;
+}
+.section-desc{
+  font-size:14px;color:var(--text-secondary);
+  margin-bottom:36px;line-height:1.6;
+  max-width:540px;
+}
 
+/* ── FORM ELEMENTS ── */
+.field-group{margin-bottom:24px}
+.field-row{display:grid;gap:20px;margin-bottom:24px}
+.field-row.cols-2{grid-template-columns:1fr 1fr}
+.field-row.cols-3{grid-template-columns:1fr 1fr 1fr}
 
-# ─────────────────────────────────────────
-# SESSION STATE INIT
-# ─────────────────────────────────────────
-if "submitted_applications" not in st.session_state:
-    st.session_state.submitted_applications = []
+label{
+  display:block;
+  font-size:12px;font-weight:600;
+  color:var(--text-secondary);
+  letter-spacing:0.04em;text-transform:uppercase;
+  margin-bottom:7px;
+}
+label .req{color:var(--teal);margin-left:2px}
 
-if "customer_submitted" not in st.session_state:
-    st.session_state.customer_submitted = False
+input[type=text],input[type=tel],input[type=email],input[type=number],select,textarea{
+  width:100%;
+  height:46px;
+  padding:0 14px;
+  background:white;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  color:var(--text-primary);
+  outline:none;
+  transition:border-color 0.15s,box-shadow 0.15s;
+  appearance:none;-webkit-appearance:none;
+}
+textarea{height:100px;padding:12px 14px;resize:vertical;line-height:1.5}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237A94AC' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;
+  padding-right:38px;cursor:pointer;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--border-focus);
+  box-shadow:0 0 0 3px rgba(0,155,141,0.12);
+}
+input::placeholder,textarea::placeholder{color:var(--text-muted);font-size:13px}
 
+.input-hint{font-size:12px;color:var(--text-muted);margin-top:5px;line-height:1.4}
+.input-prefix-wrap{position:relative}
+.input-prefix{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  font-size:14px;color:var(--text-muted);font-weight:600;pointer-events:none;
+}
+.input-prefix-wrap input{padding-left:32px}
 
-# ─────────────────────────────────────────
-# SIDEBAR
-# ─────────────────────────────────────────
-with st.sidebar:
-    st.markdown("## 🏦 Loan Default Risk Predictor")
-    st.markdown("---")
+/* BVN special */
+.bvn-wrap{position:relative}
+.bvn-status{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  font-size:12px;font-weight:600;
+}
+.bvn-ok{color:var(--success)}
+.bvn-err{color:var(--error)}
 
-    # ── VIEW MODE TOGGLE ────────────────────
-    st.markdown("### 👁️ View Mode")
-    view_mode = st.radio(
-        "Select interface",
-        ["🏦 Loan Officer Dashboard", "📋 Customer Application"],
-        help="Switch between the officer assessment view and the customer-facing application form"
-    )
-    st.markdown("---")
+/* ── RADIO CARDS ── */
+.radio-cards{display:grid;gap:12px}
+.radio-cards.cols-2{grid-template-columns:1fr 1fr}
+.radio-cards.cols-3{grid-template-columns:1fr 1fr 1fr}
+.radio-card{
+  position:relative;cursor:pointer;
+}
+.radio-card input{position:absolute;opacity:0;pointer-events:none}
+.radio-card-inner{
+  padding:16px 18px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-lg);
+  background:white;
+  transition:all 0.15s;
+}
+.radio-card input:checked + .radio-card-inner{
+  border-color:var(--teal);
+  background:var(--teal-pale);
+  box-shadow:0 0 0 3px rgba(0,155,141,0.10);
+}
+.radio-card-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:2px}
+.radio-card-desc{font-size:12px;color:var(--text-muted);line-height:1.4}
+.radio-card input:checked + .radio-card-inner .radio-card-title{color:var(--teal)}
 
-    if "Loan Officer" in view_mode:
-        st.markdown("""
-        This tool uses a machine learning model trained on
-        **1,600,000 real loan applications** to predict the
-        probability that a borrower will default.
-        """)
-        st.markdown("---")
-        st.markdown("### How it works")
-        st.markdown("""
-        1. Share the **Customer Application** link with applicants
-        2. Review submitted applications in the inbox below
-        3. Adjust risk thresholds to match your policy
-        4. Click **Predict Default Risk** for full assessment
-        5. View the risk score, SHAP explanation, and recommendation
-        """)
-        st.markdown("---")
-        st.markdown("### Model Performance")
-        st.markdown("""
-        - **AUC-ROC:** 0.7664
-        - **Recall:** 65.3% of defaults caught
-        - **Algorithm:** XGBoost
-        - **Training records:** 1,600,000
-        - **Gender-neutral:** Yes ✅
-        - **CBN compliant:** Fair lending ready
-        - **Income range:** No upper limit
-        - **Market scope:** Micro to commercial
-        """)
-        st.markdown("---")
+/* ── CHECKBOXES ── */
+.checkbox-row{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:14px 16px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  background:white;
+  cursor:pointer;margin-bottom:10px;
+  transition:border-color 0.15s;
+}
+.checkbox-row:hover{border-color:var(--teal)}
+.checkbox-row input[type=checkbox]{
+  width:18px;height:18px;flex-shrink:0;
+  margin-top:1px;accent-color:var(--teal);cursor:pointer;
+}
+.checkbox-text{font-size:13px;color:var(--text-primary);line-height:1.5}
+.checkbox-text small{display:block;color:var(--text-muted);font-size:12px;margin-top:1px}
 
-        # ── RISK THRESHOLDS ──────────────────
-        st.markdown("### ⚙️ Risk Threshold Settings")
-        st.markdown("""
-        <div style='font-size:12px;color:#B5D4F4;margin-bottom:8px'>
-        Adjust thresholds to match your institution's
-        credit policy and risk appetite.
-        </div>
-        """, unsafe_allow_html=True)
+/* ── FILE UPLOAD ── */
+.upload-zone{
+  border:2px dashed var(--border);
+  border-radius:var(--radius-lg);
+  background:white;
+  padding:28px 24px;
+  text-align:center;
+  cursor:pointer;
+  transition:all 0.2s;
+  position:relative;
+}
+.upload-zone:hover,.upload-zone.drag-over{
+  border-color:var(--teal);
+  background:var(--teal-pale);
+}
+.upload-zone input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+.upload-icon{
+  width:40px;height:40px;
+  background:var(--teal-pale);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 12px;
+}
+.upload-icon svg{width:20px;height:20px;stroke:var(--teal);fill:none;stroke-width:1.8}
+.upload-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:3px}
+.upload-sub{font-size:12px;color:var(--text-muted)}
+.upload-tag{
+  display:inline-block;
+  background:var(--teal-pale);
+  color:var(--teal);
+  border:1px solid rgba(0,155,141,0.2);
+  border-radius:4px;
+  font-size:11px;font-weight:600;
+  padding:2px 7px;margin:2px;letter-spacing:0.04em;
+  text-transform:uppercase;
+}
+.file-uploaded{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  background:var(--success-bg);
+  border:1px solid rgba(15,123,108,0.2);
+  border-radius:var(--radius);
+  margin-top:8px;
+}
+.file-uploaded svg{width:16px;height:16px;flex-shrink:0;stroke:var(--success);fill:none;stroke-width:2}
+.file-uploaded-name{font-size:13px;color:var(--success);font-weight:500;flex:1}
+.file-remove{
+  background:none;border:none;cursor:pointer;
+  color:var(--text-muted);font-size:16px;line-height:1;
+  padding:0 4px;
+}
 
-        medium_threshold = st.slider(
-            "Medium Risk Threshold (%)",
-            min_value=10, max_value=50, value=30, step=5,
-            help="Applications scoring above this are Medium Risk"
-        ) / 100
+.docs-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 
-        high_threshold = st.slider(
-            "High Risk Threshold (%)",
-            min_value=30, max_value=80, value=60, step=5,
-            help="Applications scoring above this are High Risk"
-        ) / 100
+/* ── INFO CALLOUT ── */
+.callout{
+  display:flex;gap:14px;
+  padding:16px 18px;
+  border-radius:var(--radius-lg);
+  margin-bottom:28px;
+}
+.callout-info{background:#EEF6FF;border:1px solid #B5D4F4}
+.callout-warn{background:#FFF8E6;border:1px solid #FAD97A}
+.callout-icon{
+  width:20px;height:20px;flex-shrink:0;margin-top:1px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;
+}
+.callout-info .callout-icon{background:#B5D4F4;color:#0C447C}
+.callout-warn .callout-icon{background:#FAD97A;color:#633806}
+.callout-body{font-size:13px;line-height:1.6;color:var(--text-primary)}
+.callout-body strong{font-weight:600}
 
-        if high_threshold <= medium_threshold:
-            high_threshold = medium_threshold + 0.10
+/* ── REVIEW SECTION ── */
+.review-block{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  margin-bottom:20px;
+  overflow:hidden;
+  box-shadow:var(--shadow-sm);
+}
+.review-block-header{
+  padding:16px 24px;
+  background:var(--off-white);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.review-block-title{font-size:13px;font-weight:600;color:var(--text-primary);letter-spacing:0.02em}
+.review-edit{
+  font-size:12px;color:var(--teal);font-weight:500;
+  cursor:pointer;background:none;border:none;
+}
+.review-block-body{padding:16px 24px}
+.review-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:8px 0;border-bottom:1px solid rgba(212,225,237,0.5);
+  gap:20px;
+}
+.review-row:last-child{border-bottom:none}
+.review-key{font-size:13px;color:var(--text-muted);flex:1}
+.review-val{font-size:13px;font-weight:500;color:var(--text-primary);text-align:right}
+.review-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:600;letter-spacing:0.04em;
+}
+.badge-ok{background:var(--success-bg);color:var(--success)}
+.badge-warn{background:#FFF8E6;color:#854F0B}
+.badge-missing{background:#FDF2F1;color:var(--error)}
 
-        st.markdown(f"""
-        <div style='background:#0C447C;border-radius:6px;
-                    padding:10px;font-size:12px;margin-top:8px'>
-            <div style='color:#B5D4F4;margin-bottom:6px;font-weight:600'>
-                Current institution policy:
-            </div>
-            <div style='color:#FFFFFF;margin-bottom:2px'>
-                🟢 Below {int(medium_threshold*100)}% → Approve
-            </div>
-            <div style='color:#FFFFFF;margin-bottom:2px'>
-                🟡 {int(medium_threshold*100)}–{int(high_threshold*100)}% → Conditional Review
-            </div>
-            <div style='color:#FFFFFF'>
-                🔴 Above {int(high_threshold*100)}% → Decline
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+/* ── NAV BUTTONS ── */
+.form-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:40px;padding-top:28px;
+  border-top:1px solid var(--border);
+}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:0 28px;height:48px;
+  border-radius:var(--radius);
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:600;
+  cursor:pointer;border:none;
+  transition:all 0.15s;
+  text-decoration:none;
+}
+.btn-primary{
+  background:var(--teal);color:white;
+  box-shadow:0 2px 8px rgba(0,155,141,0.28);
+}
+.btn-primary:hover{background:var(--teal-light);box-shadow:0 4px 16px rgba(0,155,141,0.35)}
+.btn-secondary{
+  background:white;color:var(--text-primary);
+  border:1.5px solid var(--border);
+}
+.btn-secondary:hover{background:var(--off-white);border-color:var(--text-muted)}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.btn-ghost{
+  background:none;border:none;color:var(--text-muted);
+  font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;
+}
 
-    else:
-        medium_threshold = 0.30
-        high_threshold = 0.60
-        st.markdown("""
-        <div style='font-size:13px;color:#B5D4F4;line-height:1.7'>
-        Fill in your details accurately and completely.
-        Your application will be reviewed by a loan officer
-        and you will be contacted with a decision.
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("---")
-        st.markdown("""
-        <div style='font-size:12px;color:#B5D4F4;line-height:1.7'>
-        🔒 Your information is securely handled and will only
-        be used for the purpose of evaluating your loan request.<br><br>
-        📋 Providing your BVN enables faster processing via
-        bureau verification. Your consent is required and logged.
-        </div>
-        """, unsafe_allow_html=True)
+/* ── SUCCESS SCREEN ── */
+.success-screen{
+  display:none;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;
+  padding:80px 48px;flex:1;
+}
+.success-icon{
+  width:80px;height:80px;
+  background:var(--success-bg);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 28px;
+}
+.success-icon svg{width:36px;height:36px;stroke:var(--success);fill:none;stroke-width:2}
+.success-ref{
+  display:inline-block;
+  font-family:monospace;font-size:20px;font-weight:700;
+  color:var(--teal);
+  background:var(--teal-pale);
+  border:1px solid rgba(0,155,141,0.2);
+  border-radius:8px;padding:8px 24px;
+  margin:20px 0;letter-spacing:0.1em;
+}
+.success-note{
+  font-size:14px;color:var(--text-secondary);
+  max-width:420px;line-height:1.7;margin:0 auto;
+}
+.success-steps{
+  display:flex;gap:16px;margin:32px 0;
+  justify-content:center;flex-wrap:wrap;
+}
+.success-step{
+  background:white;border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:16px 20px;
+  text-align:left;width:180px;
+}
+.success-step-num{
+  font-size:11px;font-weight:700;color:var(--teal);
+  letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;
+}
+.success-step-text{font-size:13px;color:var(--text-primary);line-height:1.4}
 
-    st.markdown("---")
-    st.markdown("""
-    <div style='font-size:12px'>
-    Built by <strong>Nkpo-ikana Udom</strong><br>
-    Operations & Strategy | Fintech & Credit Risk<br>
-    <a href='https://www.linkedin.com/in/nkpo-ikana-udom-479ba91a9/'
-    target='_blank'>LinkedIn</a> ·
-    <a href='https://github.com/stephenudom'
-    target='_blank'>GitHub</a>
+/* ── STEP VISIBILITY ── */
+.step-content{display:none}
+.step-content.active{display:block}
+
+/* ── DIVIDER ── */
+.divider{
+  display:flex;align-items:center;gap:12px;margin:32px 0;
+}
+.divider-line{flex:1;height:1px;background:var(--border)}
+.divider-label{font-size:12px;color:var(--text-muted);white-space:nowrap;font-weight:500}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .sidebar{display:none}
+  .form-area{padding:32px 24px 60px}
+  .top-bar{padding:14px 24px}
+  .field-row.cols-3{grid-template-columns:1fr 1fr}
+  .docs-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .field-row.cols-2,.field-row.cols-3{grid-template-columns:1fr}
+  .radio-cards.cols-3{grid-template-columns:1fr}
+  .docs-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm0 14c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-2-6.5l1.5 1.5 3-3"/></svg>
+      </div>
+      <div class="logo-brand">Joyful Smile<br>Nigeria Limited</div>
+      <div class="logo-sub">Financial Services</div>
     </div>
-    """, unsafe_allow_html=True)
 
+    <p class="sidebar-tagline">Your growth journey begins with a single application. We make it simple.</p>
 
-# ═════════════════════════════════════════════════════
-# CUSTOMER APPLICATION MODE
-# ═════════════════════════════════════════════════════
-if "Customer Application" in view_mode:
-
-    st.markdown("# 📋 Loan Application Form")
-    st.markdown(
-        "Please complete all sections accurately. "
-        "A loan officer will review your application and contact you with a decision."
-    )
-    st.markdown("---")
-
-    if st.session_state.customer_submitted:
-        st.markdown("""
-        <div style='background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(0,229,160,0.03));border-left:4px solid #00E5A0;
-                    border-radius:12px;padding:30px;text-align:center;margin-top:20px'>
-            <div style='font-size:40px'>✅</div>
-            <div style='font-size:22px;font-weight:700;color:#00E5A0;margin-top:10px'>
-                Application Received
-            </div>
-            <div style='font-size:15px;color:#C8D8E8;margin-top:10px;line-height:1.8'>
-                Thank you. Your application has been submitted successfully.<br>
-                A loan officer will review your details and reach out to you shortly.<br><br>
-                <strong>Reference:</strong> APP-{ref}
-            </div>
+    <nav class="steps-nav">
+      <div class="step-item active" onclick="goTo(1)">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">Personal Details</div>
+          <div class="step-label">Identity & contact</div>
         </div>
-        """.format(ref=np.random.randint(100000, 999999)), unsafe_allow_html=True)
-
-        if st.button("Submit Another Application"):
-            st.session_state.customer_submitted = False
-            st.rerun()
-
-    else:
-        # ── SECTION 1: PERSONAL DETAILS ──────────
-        st.markdown('<div class="section-header">1. Personal Details</div>', unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            c_fullname = st.text_input("Full Name", placeholder="e.g. Chukwuemeka Obi")
-            c_age = st.slider("Age (years)", 18, 70, 30)
-            c_family_status = st.selectbox("Marital Status", ["Single", "Married", "Divorced", "Widow"])
-        with c2:
-            c_phone = st.text_input("Phone Number", placeholder="e.g. 08012345678")
-            c_education = st.selectbox("Highest Education Level", [
-                "Secondary", "Higher education", "Incomplete higher",
-                "Lower secondary", "Academic degree"
-            ])
-            c_children = st.number_input("Number of Dependants", 0, 10, 0)
-        with c3:
-            c_family_members = st.number_input("Total Family Members", 1, 15, 2)
-            st.markdown('<p style="font-size:10px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Supporting Documents</p>', unsafe_allow_html=True)
-            c_biz_reg   = st.file_uploader("📄 Business Registration Certificate", type=["pdf","jpg","jpeg","png"], key="biz_reg_file")
-            c_bank_stmt = st.file_uploader("🏦 6 Months Bank Statement", type=["pdf","jpg","jpeg","png"], key="bank_file")
-            c_tax_id    = st.file_uploader("📋 Tax Identification Number (TIN)", type=["pdf","jpg","jpeg","png"], key="tax_file")
-            c_utility   = st.file_uploader("🔖 Utility Bill / Proof of Address", type=["pdf","jpg","jpeg","png"], key="utility_file")
-
-        st.markdown("---")
-
-        # ── SECTION 2: EMPLOYMENT & INCOME ───────
-        st.markdown('<div class="section-header">2. Employment & Income</div>', unsafe_allow_html=True)
-        e1, e2, e3 = st.columns(3)
-        with e1:
-            c_employment_sector = st.selectbox("Employment Sector", [
-                "Banking / Finance", "Government / Civil Service",
-                "Healthcare", "Education", "Technology",
-                "Trade / Commerce", "Agriculture",
-                "Transport / Logistics", "Construction",
-                "Other"
-            ])
-            c_income_type = st.selectbox("Income Type", [
-                "Fixed Salary", "Business / Self-Employed",
-                "Commission-Based", "Irregular / Seasonal"
-            ])
-        with e2:
-            c_employment_years = st.slider("Years in Current Job / Business", 0, 40, 3)
-            c_income = st.number_input(
-                "Monthly Net Income (₦)",
-                min_value=10000, max_value=50000000, value=150000, step=10000, format="%d",
-                help="Your take-home income after tax and deductions"
-            )
-        with e3:
-            c_employer = st.text_input("Employer / Business Name", placeholder="e.g. Lagos State Government")
-            c_active_loans = st.number_input(
-                "Number of Active Loans / Credit Facilities",
-                min_value=0, max_value=20, value=0,
-                help="Include all active loans across all lenders"
-            )
-
-        st.markdown("---")
-
-        # ── SECTION 3: LOAN REQUEST ───────────────
-        st.markdown('<div class="section-header">3. Loan Request</div>', unsafe_allow_html=True)
-        l1, l2, l3 = st.columns(3)
-        with l1:
-            c_loan_amount = st.number_input(
-                "Loan Amount Requested (₦)",
-                min_value=10000, max_value=500000000, value=500000, step=50000, format="%d"
-            )
-            c_contract_type = st.selectbox("Loan Type", ["Cash loans", "Revolving loans"])
-        with l2:
-            c_annuity = st.number_input(
-                "Expected Monthly Repayment (₦)",
-                min_value=1000, max_value=50000000, value=50000, step=5000, format="%d"
-            )
-            c_goods_price = st.number_input(
-                "Asset / Purpose Value (₦)",
-                min_value=0, max_value=500000000, value=400000, step=50000, format="%d",
-                help="Value of asset, goods, or purpose of the loan"
-            )
-        with l3:
-            c_delinquency = st.selectbox(
-                "Previous Loan Default History",
-                ["Never", "5+ years ago", "2 to 5 years ago", "Within the last 2 years"],
-                help="Has this applicant ever defaulted on a loan?"
-            )
-
-        st.markdown("---")
-
-        # ── SECTION 4: BVN VERIFICATION ──────────
-        st.markdown('<div class="section-header">4. BVN Verification (Required)</div>', unsafe_allow_html=True)
-        st.markdown("""
-        <div style='background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(0,212,255,0.03));
-                    border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:14px 18px;
-                    font-size:12px;color:#C8D8E8;margin-bottom:14px;line-height:1.8;
-                    font-family:Sora,sans-serif'>
-            Your BVN is required to verify your identity and retrieve your credit bureau history.
-            This is a <strong style="color:#00D4FF">soft enquiry only</strong> and will not affect your credit score.
-            Your BVN is encrypted and used solely for this application.
+      </div>
+      <div class="step-item" onclick="goTo(2)">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Employment & Income</div>
+          <div class="step-label">Work & earnings</div>
         </div>
-        """, unsafe_allow_html=True)
-
-        bvn_col1, bvn_col2 = st.columns([2, 1])
-        with bvn_col1:
-            c_bvn = st.text_input(
-                "Bank Verification Number (BVN)",
-                placeholder="Enter your 11-digit BVN",
-                max_chars=11,
-                help="Your BVN is an 11-digit number issued by your bank"
-            )
-        with bvn_col2:
-            bvn_verified = False
-            if c_bvn and len(c_bvn) == 11 and c_bvn.isdigit():
-                st.markdown("""
-                <div style='margin-top:28px'>
-                    <span class='verified-badge'>✅ BVN Format Valid</span>
-                </div>
-                """, unsafe_allow_html=True)
-                bvn_verified = True
-            elif c_bvn:
-                st.markdown("""
-                <div style='margin-top:28px'>
-                    <span class='unverified-badge'>⚠️ Invalid BVN Format</span>
-                </div>
-                """, unsafe_allow_html=True)
-
-        c_bvn_consent = st.checkbox("I consent to BVN-based credit bureau verification (soft enquiry only)")
-
-        if c_bvn and c_bvn_consent and bvn_verified:
-            st.info(
-                "🔄 In production: A live bureau API call (CRC / FirstCentral / Mono) would be triggered here "
-                "to auto-populate your credit history. Your application will be flagged as Bureau-Verified."
-            )
-
-        st.markdown("---")
-
-        # ── SUBMIT ────────────────────────────────
-        if st.button("📤 Submit Application"):
-            if not c_fullname or not c_phone:
-                st.error("Please provide your full name and phone number before submitting.")
-            else:
-                annual_income = c_income * 12
-                application = {
-                    "name": c_fullname,
-                    "phone": c_phone,
-                    "age": c_age,
-                    "family_status": c_family_status,
-                    "education": c_education,
-                    "children": c_children,
-                    "family_members": c_family_members,
-                    "biz_reg": c_biz_reg is not None,
-                    "bank_stmt": c_bank_stmt is not None,
-                    "tax_id": c_tax_id is not None,
-                    "utility": c_utility is not None,
-                    "biz_reg_file": c_biz_reg.name if c_biz_reg else None,
-                    "bank_stmt_file": c_bank_stmt.name if c_bank_stmt else None,
-                    "tax_id_file": c_tax_id.name if c_tax_id else None,
-                    "utility_file": c_utility.name if c_utility else None,
-                    "biz_reg_bytes": c_biz_reg.read() if c_biz_reg else None,
-                    "bank_stmt_bytes": c_bank_stmt.read() if c_bank_stmt else None,
-                    "tax_id_bytes": c_tax_id.read() if c_tax_id else None,
-                    "utility_bytes": c_utility.read() if c_utility else None,
-                    "own_car": False,
-                    "own_realty": False,
-                    "flag_document_3": any([c_biz_reg, c_bank_stmt, c_tax_id, c_utility]),
-                    "employment_sector": c_employment_sector,
-                    "income_type": c_income_type,
-                    "employment_years": c_employment_years,
-                    "income": annual_income,
-                    "employer": c_employer,
-                    "active_loans": c_active_loans,
-                    "loan_amount": c_loan_amount,
-                    "contract_type": c_contract_type,
-                    "annuity": c_annuity,
-                    "goods_price": c_goods_price,
-                    "delinquency_recency": c_delinquency,
-                    "bvn_provided": bvn_verified and c_bvn_consent,
-                    "ext_source_1": 0.5,
-                    "ext_source_2": 0.5,
-                    "ext_source_3": 0.5,
-                }
-                st.session_state.submitted_applications.append(application)
-                st.session_state.customer_submitted = True
-                st.rerun()
-
-
-# ═════════════════════════════════════════════════════
-# LOAN OFFICER DASHBOARD
-# ═════════════════════════════════════════════════════
-else:
-
-    st.markdown("# 🏦 Loan Default Risk Predictor")
-    st.markdown(
-        "Assess borrower credit risk using machine learning. "
-        "Pre-fill from a submitted customer application or enter details manually below."
-    )
-
-    st.warning(
-        "⚖️ **Decision Support Tool — Not a Substitute for Credit Judgement** — "
-        "This tool provides a data-driven risk signal to aid informed decision-making. "
-        "Final approval must incorporate loan officer assessment of borrower context, "
-        "market conditions, guarantor quality, and institutional credit policy."
-    )
-    st.info(
-        "🔒 **Fair Lending Model** — Gender-neutral and CBN fair lending compliant. "
-        "Risk scoring is based solely on financial behaviour and creditworthiness indicators. "
-        "| 📍 Built for Nigeria · Powered by XGBoost · Explained by SHAP"
-    )
-    st.markdown("---")
-
-    # ── SUBMITTED APPLICATIONS INBOX ─────────
-    if st.session_state.submitted_applications:
-        st.markdown('<div class="section-header">📥 Submitted Applications Inbox</div>', unsafe_allow_html=True)
-        st.markdown(f"**{len(st.session_state.submitted_applications)} application(s) awaiting review**")
-
-        # ── APPLICATION CARDS ──────────────────
-        for i, a in enumerate(st.session_state.submitted_applications):
-            docs_submitted = sum([a.get("biz_reg",False), a.get("bank_stmt",False), a.get("tax_id",False), a.get("utility",False)])
-            bvn_badge = "🔵 BVN Verified" if a.get("bvn_provided") else "⚠️ No BVN"
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border:1px solid rgba(0,212,255,0.15);
-                        border-radius:10px;padding:16px 20px;margin-bottom:10px">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                    <div>
-                        <div style="font-size:16px;font-weight:700;color:#F0F6FF">{a['name']}</div>
-                        <div style="font-size:11px;color:#8BA3BF;margin-top:3px;font-family:Space Mono,monospace">
-                            APP-{i+1:03d} &nbsp;|&nbsp; ₦{a['loan_amount']:,} &nbsp;|&nbsp; {a['employment_sector']} &nbsp;|&nbsp; {bvn_badge}
-                        </div>
-                    </div>
-                    <div style="text-align:right">
-                        <div style="font-size:11px;color:#00D4FF;font-family:Space Mono,monospace">{docs_submitted}/4 docs</div>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        app_options = [
-            f"APP-{i+1:03d} — {a['name']} | ₦{a['loan_amount']:,} | {a['employment_sector']}"
-            for i, a in enumerate(st.session_state.submitted_applications)
-        ]
-        app_options = ["-- Select an application to assess --"] + app_options
-        selected_app = st.selectbox("Open application for full assessment", app_options)
-
-        if selected_app != "-- Select an application to assess --":
-            app_idx = int(selected_app.split("APP-")[1].split(" ")[0]) - 1
-            loaded = st.session_state.submitted_applications[app_idx]
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,rgba(0,229,160,0.08),rgba(0,229,160,0.03));
-                        border:1px solid rgba(0,229,160,0.25);border-radius:8px;padding:12px 18px">
-                <span style="font-size:14px;font-weight:700;color:#00E5A0">✅ Loaded: {loaded['name']}</span>
-                <span style="font-size:11px;color:#8BA3BF;margin-left:12px;font-family:Space Mono,monospace">
-                    {'🔵 Bureau-Verified' if loaded.get('bvn_provided') else '⚠️ Self-Reported — BVN not provided'}
-                </span>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            loaded = None
-        st.markdown("---")
-    else:
-        loaded = None
-
-    # ── INPUT FORM ────────────────────────────
-    st.markdown('<div class="section-header">Borrower Information</div>', unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-
-    def pre(key, default):
-        if loaded:
-            return loaded.get(key, default)
-        return default
-
-    with col1:
-        st.markdown(
-            '<p style="font-size:11px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;'
-            'border-bottom:2px solid #2E75B6;padding-bottom:6px">Personal Details</p>',
-            unsafe_allow_html=True
-        )
-        age = st.slider("Age (years)", 18, 70, pre("age", 35))
-        family_status = st.selectbox(
-            "Family Status",
-            ["Single", "Married", "Divorced", "Widow"],
-            index=["Single", "Married", "Divorced", "Widow"].index(pre("family_status", "Single"))
-        )
-        children = st.number_input("Number of Dependants", 0, 10, pre("children", 0))
-        family_members = st.number_input("Total Family Members", 1, 15, pre("family_members", 2))
-        education = st.selectbox(
-            "Education Level",
-            ["Secondary", "Higher education", "Incomplete higher", "Lower secondary", "Academic degree"],
-            index=["Secondary", "Higher education", "Incomplete higher", "Lower secondary", "Academic degree"].index(
-                pre("education", "Secondary")
-            )
-        )
-
-    with col2:
-        st.markdown(
-            '<p style="font-size:11px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;'
-            'border-bottom:2px solid #2E75B6;padding-bottom:6px">Financial Details</p>',
-            unsafe_allow_html=True
-        )
-        income = st.number_input(
-            "Annual Income (₦)",
-            min_value=10000, max_value=500000000,
-            value=pre("income", 1800000), step=50000, format="%d",
-            help="Total annual income — salary, business income, and all other sources"
-        )
-        loan_amount = st.number_input(
-            "Loan Amount Requested (₦)",
-            min_value=10000, max_value=500000000,
-            value=pre("loan_amount", 5000000), step=100000, format="%d"
-        )
-        annuity = st.number_input(
-            "Monthly Repayment Amount (₦)",
-            min_value=1000, max_value=50000000,
-            value=pre("annuity", 150000), step=10000, format="%d"
-        )
-        goods_price = st.number_input(
-            "Asset / Goods Value (₦)",
-            min_value=0, max_value=500000000,
-            value=pre("goods_price", 4500000), step=100000, format="%d"
-        )
-        contract_type = st.selectbox(
-            "Loan Type",
-            ["Cash loans", "Revolving loans"],
-            index=["Cash loans", "Revolving loans"].index(pre("contract_type", "Cash loans"))
-        )
-
-    with col3:
-        st.markdown(
-            '<p style="font-size:11px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;'
-            'border-bottom:2px solid #2E75B6;padding-bottom:6px">Employment, History & Identity</p>',
-            unsafe_allow_html=True
-        )
-
-        # Employment enhancements
-        employment_sector = st.selectbox(
-            "Employment Sector",
-            ["Banking / Finance", "Government / Civil Service", "Healthcare", "Education",
-             "Technology", "Trade / Commerce", "Agriculture", "Transport / Logistics",
-             "Construction", "Other"],
-            index=["Banking / Finance", "Government / Civil Service", "Healthcare", "Education",
-                   "Technology", "Trade / Commerce", "Agriculture", "Transport / Logistics",
-                   "Construction", "Other"].index(pre("employment_sector", "Trade / Commerce"))
-        )
-        income_type = st.selectbox(
-            "Income Type",
-            ["Fixed Salary", "Business / Self-Employed", "Commission-Based", "Irregular / Seasonal"],
-            index=["Fixed Salary", "Business / Self-Employed", "Commission-Based", "Irregular / Seasonal"].index(
-                pre("income_type", "Fixed Salary")
-            ),
-            help="Income stability is a key default predictor"
-        )
-        employment_years = st.slider(
-            "Years in Current Employment / Business",
-            0, 40, pre("employment_years", 5)
-        )
-
-        # Credit history enhancements
-        st.markdown(
-            '<p style="font-size:13px;font-weight:600;color:#F0F6FF;margin-top:10px;margin-bottom:4px">'
-            'Credit History</p>',
-            unsafe_allow_html=True
-        )
-        delinquency_recency = st.selectbox(
-            "Previous Default History",
-            ["Never", "5+ years ago", "2 to 5 years ago", "Within the last 2 years"],
-            index=["Never", "5+ years ago", "2 to 5 years ago", "Within the last 2 years"].index(
-                pre("delinquency_recency", "Never")
-            ),
-            help="Recency of default is a stronger predictor than frequency"
-        )
-        active_loans = st.number_input(
-            "Active Loan Obligations (all lenders)",
-            min_value=0, max_value=20,
-            value=pre("active_loans", 0),
-            help="Total number of active loans across all lenders — impacts DTI"
-        )
-
-        ext_source_1 = st.slider(
-            "Credit Bureau Score 1", 0.0, 1.0,
-            pre("ext_source_1", 0.5), 0.01,
-            help="0 = poor, 1 = excellent. Leave at 0.5 if unknown."
-        )
-        ext_source_2 = st.slider(
-            "Credit Bureau Score 2", 0.0, 1.0,
-            pre("ext_source_2", 0.5), 0.01
-        )
-        ext_source_3 = st.slider(
-            "Credit Bureau Score 3", 0.0, 1.0,
-            pre("ext_source_3", 0.5), 0.01
-        )
-
-        # BVN
-        st.markdown(
-            '<p style="font-size:13px;font-weight:600;color:#F0F6FF;margin-top:10px;margin-bottom:4px">'
-            'Identity Verification</p>',
-            unsafe_allow_html=True
-        )
-        bvn_input = st.text_input(
-            "BVN (Bank Verification Number)",
-            placeholder="11-digit BVN",
-            max_chars=11,
-            help="Triggers bureau API call to auto-verify credit history in production"
-        )
-        bvn_consent_officer = st.checkbox(
-            "✅ Applicant consent obtained for bureau enquiry",
-            value=pre("bvn_provided", False)
-        )
-
-        bvn_valid = bvn_input and len(bvn_input) == 11 and bvn_input.isdigit()
-        bvn_bureau_verified = bvn_valid and bvn_consent_officer
-
-        if bvn_bureau_verified:
-            st.markdown('<span class="verified-badge">✅ Bureau-Verified Application</span>', unsafe_allow_html=True)
-            st.info("🔄 Production: Live CRC/FirstCentral/Mono API call would populate bureau scores automatically.")
-        elif bvn_input:
-            st.markdown('<span class="unverified-badge">⚠️ BVN Invalid or Consent Pending</span>', unsafe_allow_html=True)
-
-        st.markdown(
-            '<p style="font-size:13px;font-weight:600;color:#F0F6FF;margin-top:10px;margin-bottom:4px">'
-            'Document Verification</p>',
-            unsafe_allow_html=True
-        )
-        doc_biz_reg   = pre("biz_reg", False)
-        doc_bank_stmt = pre("bank_stmt", False)
-        doc_tin       = pre("tax_id", False)
-        doc_utility   = pre("utility", False)
-        flag_document_3 = any([doc_biz_reg, doc_bank_stmt, doc_tin, doc_utility])
-
-        # ── DOCUMENT STATUS PANEL ──────────────
-        docs_info = [
-            ("📄 Business Registration", doc_biz_reg, pre("biz_reg_file", None)),
-            ("🏦 6-Month Bank Statement", doc_bank_stmt, pre("bank_stmt_file", None)),
-            ("📋 TIN / Tax Document", doc_tin, pre("tax_id_file", None)),
-            ("🔖 Utility Bill / Proof of Address", doc_utility, pre("utility_file", None)),
-        ]
-        # ── DOCUMENT STATUS + DOWNLOAD ─────────
-        st.markdown('''
-        <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border:1px solid rgba(0,212,255,0.15);
-                    border-radius:10px;padding:14px 18px;margin-top:8px;margin-bottom:8px">
-            <div style="font-size:10px;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;
-                        letter-spacing:0.12em;margin-bottom:10px;font-weight:700">Document Verification Panel</div>
+      </div>
+      <div class="step-item" onclick="goTo(3)">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">Loan Request</div>
+          <div class="step-label">Amount & purpose</div>
         </div>
-        ''', unsafe_allow_html=True)
+      </div>
+      <div class="step-item" onclick="goTo(4)">
+        <div class="step-num">4</div>
+        <div>
+          <div class="step-title">Documents</div>
+          <div class="step-label">Supporting files</div>
+        </div>
+      </div>
+      <div class="step-item" onclick="goTo(5)">
+        <div class="step-num">5</div>
+        <div>
+          <div class="step-title">BVN & Review</div>
+          <div class="step-label">Verify & submit</div>
+        </div>
+      </div>
+    </nav>
 
-        doc_keys = [
-            ("📄 Business Registration", "biz_reg", "biz_reg_file", "biz_reg_bytes"),
-            ("🏦 6-Month Bank Statement", "bank_stmt", "bank_stmt_file", "bank_stmt_bytes"),
-            ("📋 TIN / Tax Document", "tax_id", "tax_id_file", "tax_id_bytes"),
-            ("🔖 Utility Bill / Address", "utility", "utility_file", "utility_bytes"),
-        ]
-        for label, submitted_key, file_key, bytes_key in doc_keys:
-            submitted = pre(submitted_key, False)
-            filename  = pre(file_key, None)
-            filebytes = pre(bytes_key, None)
-            dcol1, dcol2 = st.columns([3, 1])
-            with dcol1:
-                if submitted and filename:
-                    st.markdown(f'''<div style="padding:8px 0;font-size:12px;color:#C8D8E8">
-                        <span style="color:#00E5A0;font-weight:700">✅ {label}</span>
-                        <span style="color:#8BA3BF;font-size:11px;margin-left:8px;font-family:Space Mono,monospace">{filename}</span>
-                    </div>''', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'''<div style="padding:8px 0;font-size:12px">
-                        <span style="color:#FF4560;font-weight:700">⚠ {label}</span>
-                        <span style="color:#8BA3BF;font-size:11px;margin-left:8px">Not uploaded</span>
-                    </div>''', unsafe_allow_html=True)
-            with dcol2:
-                if filebytes and filename:
-                    ext = filename.split(".")[-1].lower()
-                    mime = "application/pdf" if ext == "pdf" else f"image/{ext}"
-                    st.download_button(
-                        label="⬇ Download",
-                        data=filebytes,
-                        file_name=filename,
-                        mime=mime,
-                        key=f"dl_{bytes_key}_{pre('name','applicant')}",
-                        use_container_width=True
-                    )
+    <div class="sidebar-help">
+      <div class="help-line">Need assistance?</div>
+      <div class="help-contact">07010057527</div>
+      <div class="help-contact" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">joyfulsmilesnigerialimited@gmail.com</div>
+    </div>
+  </aside>
 
-    st.markdown("---")
+  <!-- ── MAIN ── -->
+  <div class="main-content">
 
-    # ── ENGINEERED FEATURES ───────────────────
-    def compute_engineered_features(
-            age, income, loan_amount, annuity,
-            employment_years, ext_source_1,
-            ext_source_2, ext_source_3,
-            family_members, goods_price,
-            children, own_car, own_realty,
-            flag_document_3, contract_type,
-            education, family_status):
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="top-bar-left">Loan Application &nbsp;/&nbsp; <strong id="top-step-name">Personal Details</strong></div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill" style="width:20%"></div>
+      </div>
+      <div class="progress-label" id="progress-label">Step 1 of 5</div>
+    </div>
 
-        ext_sources = [s for s in [ext_source_1, ext_source_2, ext_source_3] if s > 0]
-        ext_mean = np.mean(ext_sources) if ext_sources else 0.5
-        ext_min = np.min(ext_sources) if ext_sources else 0.5
+    <!-- Form area -->
+    <div class="form-area">
 
-        return {
-            'AGE_YEARS': age,
-            'EMPLOYMENT_YEARS': employment_years,
-            'CREDIT_INCOME_RATIO': loan_amount / max(income, 1),
-            'ANNUITY_INCOME_RATIO': annuity / max(income, 1),
-            'CREDIT_TERM_YEARS': annuity / max(loan_amount, 1),
-            'INCOME_PER_PERSON': income / max(family_members, 1),
-            'EXT_SOURCE_MEAN': ext_mean,
-            'EXT_SOURCE_MIN': ext_min,
-            'EMPLOYMENT_AGE_RATIO': employment_years / max(age, 1),
-            'EXT_SOURCE_1': ext_source_1,
-            'EXT_SOURCE_2': ext_source_2,
-            'EXT_SOURCE_3': ext_source_3,
-            'AMT_CREDIT': loan_amount,
-            'AMT_INCOME_TOTAL': income,
-            'AMT_ANNUITY': annuity,
-            'AMT_GOODS_PRICE': goods_price,
-            'DAYS_BIRTH': -age * 365,
-            'DAYS_EMPLOYED': -employment_years * 365,
-            'CNT_CHILDREN': children,
-            'CNT_FAM_MEMBERS': family_members,
-            'FLAG_OWN_CAR': 1 if own_car else 0,
-            'FLAG_OWN_REALTY': 1 if own_realty else 0,
-            'FLAG_DOCUMENT_3': 1 if flag_document_3 else 0,
-            'NAME_CONTRACT_TYPE': 1 if contract_type == "Revolving loans" else 0,
-            'NAME_EDUCATION_TYPE_Higher education': 1 if education == "Higher education" else 0,
-            'NAME_FAMILY_STATUS_Married': 1 if family_status == "Married" else 0,
-        }
+      <!-- ══ STEP 1: PERSONAL DETAILS ══ -->
+      <div class="step-content active" id="step-1">
+        <div class="section-eyebrow">Step 1 of 5</div>
+        <h1 class="section-title">Personal Details</h1>
+        <p class="section-desc">Provide your personal information exactly as it appears on your government-issued ID.</p>
 
-    # ── PREDICT BUTTON ────────────────────────
-    predict_col, _ = st.columns([1, 2])
-    with predict_col:
-        predict_button = st.button("🔍 Predict Default Risk")
+        <div class="field-row cols-2">
+          <div>
+            <label>First Name <span class="req">*</span></label>
+            <input type="text" id="first-name" placeholder="e.g. Chukwuemeka">
+          </div>
+          <div>
+            <label>Last Name <span class="req">*</span></label>
+            <input type="text" id="last-name" placeholder="e.g. Okonkwo">
+          </div>
+        </div>
 
-    if predict_button:
+        <div class="field-row cols-2">
+          <div>
+            <label>Middle Name</label>
+            <input type="text" id="middle-name" placeholder="Optional">
+          </div>
+          <div>
+            <label>Date of Birth <span class="req">*</span></label>
+            <input type="text" id="dob" placeholder="DD / MM / YYYY">
+          </div>
+        </div>
 
-        engineered = compute_engineered_features(
-            age, income, loan_amount, annuity,
-            employment_years, ext_source_1,
-            ext_source_2, ext_source_3,
-            family_members, goods_price,
-            children, own_car, own_realty,
-            flag_document_3, contract_type,
-            education, family_status
-        )
-        input_df = build_input_dataframe(engineered, feature_names)
+        <div class="field-row cols-2">
+          <div>
+            <label>Phone Number <span class="req">*</span></label>
+            <input type="tel" id="phone" placeholder="e.g. 08012345678">
+          </div>
+          <div>
+            <label>Email Address</label>
+            <input type="email" id="email" placeholder="e.g. name@email.com">
+          </div>
+        </div>
 
-        raw_probability = model.predict_proba(input_df)[0][1]
+        <div class="field-row cols-3">
+          <div>
+            <label>Marital Status <span class="req">*</span></label>
+            <select id="marital">
+              <option value="">Select</option>
+              <option>Single</option>
+              <option>Married</option>
+              <option>Divorced</option>
+              <option>Widowed</option>
+            </select>
+          </div>
+          <div>
+            <label>No. of Dependants</label>
+            <input type="number" id="dependants" placeholder="0" min="0" max="20">
+          </div>
+          <div>
+            <label>Total Family Members</label>
+            <input type="number" id="family" placeholder="1" min="1">
+          </div>
+        </div>
 
-        # Apply contextual modifiers from enhanced fields
-        modifier = (
-            delinquency_risk_modifier(delinquency_recency) +
-            active_loan_modifier(active_loans) +
-            income_stability_modifier(income_type)
-        )
-        probability = min(raw_probability + modifier, 1.0)
+        <div class="field-row cols-2">
+          <div>
+            <label>Highest Education Level <span class="req">*</span></label>
+            <select id="education">
+              <option value="">Select level</option>
+              <option>SSCE / O'Level</option>
+              <option>OND / NCE</option>
+              <option>HND / B.Sc</option>
+              <option>Postgraduate (M.Sc / MBA)</option>
+              <option>PhD / Doctorate</option>
+              <option>Professional Certification</option>
+              <option>No formal education</option>
+            </select>
+          </div>
+          <div>
+            <label>Residential State <span class="req">*</span></label>
+            <select id="state">
+              <option value="">Select state</option>
+              <option>Abia</option><option>Adamawa</option><option>Akwa Ibom</option>
+              <option>Anambra</option><option>Bauchi</option><option>Bayelsa</option>
+              <option>Benue</option><option>Borno</option><option>Cross River</option>
+              <option>Delta</option><option>Ebonyi</option><option>Edo</option>
+              <option>Ekiti</option><option>Enugu</option><option>FCT — Abuja</option>
+              <option>Gombe</option><option>Imo</option><option>Jigawa</option>
+              <option>Kaduna</option><option>Kano</option><option>Katsina</option>
+              <option>Kebbi</option><option>Kogi</option><option>Kwara</option>
+              <option>Lagos</option><option>Nasarawa</option><option>Niger</option>
+              <option>Ogun</option><option>Ondo</option><option>Osun</option>
+              <option>Oyo</option><option>Plateau</option><option>Rivers</option>
+              <option>Sokoto</option><option>Taraba</option><option>Yobe</option>
+              <option>Zamfara</option>
+            </select>
+          </div>
+        </div>
 
-        risk_label, risk_color, risk_class, risk_icon = get_risk_label(
-            probability, medium_threshold, high_threshold
-        )
+        <div class="field-group">
+          <label>Residential Address <span class="req">*</span></label>
+          <textarea id="address" placeholder="House number, street, town, local government area"></textarea>
+        </div>
 
-        credit_income = loan_amount / max(income, 1)
-        ext_avg = np.mean([ext_source_1, ext_source_2, ext_source_3])
+        <div class="form-nav">
+          <span></span>
+          <button class="btn btn-primary" onclick="nextStep()">
+            Continue
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
 
-        st.markdown("---")
-        st.markdown("## Assessment Result")
+      <!-- ══ STEP 2: EMPLOYMENT & INCOME ══ -->
+      <div class="step-content" id="step-2">
+        <div class="section-eyebrow">Step 2 of 5</div>
+        <h1 class="section-title">Employment & Income</h1>
+        <p class="section-desc">Tell us about your work and how you earn. This helps us determine the right loan size for you.</p>
 
-        if bvn_bureau_verified:
-            st.markdown(
-                '<span class="verified-badge">✅ Bureau-Verified Application — Score anchored to real data</span>',
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                '<span class="unverified-badge">⚠️ Self-Reported — Bureau verification recommended for higher confidence</span>',
-                unsafe_allow_html=True
-            )
+        <div class="field-row cols-2">
+          <div>
+            <label>Employment Status <span class="req">*</span></label>
+            <select id="emp-status" onchange="toggleEmpFields()">
+              <option value="">Select</option>
+              <option>Employed (Full-time)</option>
+              <option>Employed (Part-time)</option>
+              <option>Self-Employed / Business Owner</option>
+              <option>Civil Servant / Government Employee</option>
+              <option>Contractor / Freelancer</option>
+              <option>Retired</option>
+              <option>Unemployed</option>
+            </select>
+          </div>
+          <div>
+            <label>Employment Sector <span class="req">*</span></label>
+            <select id="emp-sector">
+              <option value="">Select sector</option>
+              <option>Banking & Finance</option>
+              <option>Government / Civil Service</option>
+              <option>Healthcare & Pharmaceuticals</option>
+              <option>Education & Training</option>
+              <option>Technology & Telecoms</option>
+              <option>Trade & Commerce</option>
+              <option>Agriculture & Agribusiness</option>
+              <option>Transport & Logistics</option>
+              <option>Construction & Real Estate</option>
+              <option>Oil & Gas</option>
+              <option>Manufacturing</option>
+              <option>Creative & Media</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        <div class="field-row cols-2" id="employer-fields">
+          <div>
+            <label>Employer / Business Name <span class="req">*</span></label>
+            <input type="text" id="employer" placeholder="e.g. Lagos State Government">
+          </div>
+          <div>
+            <label>Years in Current Role / Business <span class="req">*</span></label>
+            <select id="emp-years">
+              <option value="">Select</option>
+              <option>Less than 6 months</option>
+              <option>6 months to 1 year</option>
+              <option>1 to 2 years</option>
+              <option>2 to 5 years</option>
+              <option>5 to 10 years</option>
+              <option>Over 10 years</option>
+            </select>
+          </div>
+        </div>
 
-        # ── RESULT CARDS ──────────────────────
-        r1, r2, r3, r4 = st.columns(4)
+        <div class="field-row cols-2">
+          <div>
+            <label>Income Type <span class="req">*</span></label>
+            <select id="income-type">
+              <option value="">Select</option>
+              <option>Fixed Monthly Salary</option>
+              <option>Business Revenue (Regular)</option>
+              <option>Commission-Based</option>
+              <option>Irregular / Seasonal</option>
+              <option>Pension</option>
+              <option>Rental Income</option>
+              <option>Multiple Sources</option>
+            </select>
+          </div>
+          <div>
+            <label>Pay Frequency <span class="req">*</span></label>
+            <select id="pay-freq">
+              <option value="">Select</option>
+              <option>Monthly</option>
+              <option>Bi-weekly</option>
+              <option>Weekly</option>
+              <option>Daily</option>
+              <option>Project-based</option>
+            </select>
+          </div>
+        </div>
 
-        with r1:
-            st.markdown(f"""
-            <div class="{risk_class}">
-                <div style="font-size:36px">{risk_icon}</div>
-                <div style="font-size:20px;font-weight:700;color:{risk_color};margin-top:6px">
-                    {risk_label}
+        <div class="field-row cols-2">
+          <div>
+            <label>Monthly Net Income (₦) <span class="req">*</span></label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">₦</span>
+              <input type="number" id="monthly-income" placeholder="0.00" min="0">
+            </div>
+            <div class="input-hint">Take-home income after tax and deductions</div>
+          </div>
+          <div>
+            <label>Other Monthly Income (₦)</label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">₦</span>
+              <input type="number" id="other-income" placeholder="0.00" min="0">
+            </div>
+            <div class="input-hint">Rental, commission, business, etc.</div>
+          </div>
+        </div>
+
+        <div class="field-row cols-2">
+          <div>
+            <label>Total Monthly Obligations (₦)</label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">₦</span>
+              <input type="number" id="obligations" placeholder="0.00" min="0">
+            </div>
+            <div class="input-hint">Existing loan repayments, rent, etc.</div>
+          </div>
+          <div>
+            <label>Number of Active Loans</label>
+            <input type="number" id="active-loans" placeholder="0" min="0">
+            <div class="input-hint">Across all lenders including this application</div>
+          </div>
+        </div>
+
+        <div class="field-row cols-2">
+          <div>
+            <label>Previous Loan Default History</label>
+            <select id="default-history">
+              <option value="Never">Never defaulted</option>
+              <option value="5yr">Defaulted — over 5 years ago</option>
+              <option value="2-5yr">Defaulted — 2 to 5 years ago</option>
+              <option value="recent">Defaulted — within the last 2 years</option>
+            </select>
+          </div>
+          <div>
+            <label>Work / Office Phone Number</label>
+            <input type="tel" id="work-phone" placeholder="e.g. 0123456789">
+          </div>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn btn-secondary" onclick="prevStep()">
+            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back
+          </button>
+          <button class="btn btn-primary" onclick="nextStep()">
+            Continue
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ══ STEP 3: LOAN REQUEST ══ -->
+      <div class="step-content" id="step-3">
+        <div class="section-eyebrow">Step 3 of 5</div>
+        <h1 class="section-title">Loan Request</h1>
+        <p class="section-desc">Tell us how much you need, what it's for, and how you plan to repay.</p>
+
+        <div class="field-row cols-2">
+          <div>
+            <label>Loan Amount Requested (₦) <span class="req">*</span></label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">₦</span>
+              <input type="number" id="loan-amount" placeholder="0.00" min="10000" oninput="updateDSR()">
+            </div>
+          </div>
+          <div>
+            <label>Loan Tenure <span class="req">*</span></label>
+            <select id="loan-tenure" onchange="updateDSR()">
+              <option value="">Select</option>
+              <option value="3">3 months</option>
+              <option value="6">6 months</option>
+              <option value="9">9 months</option>
+              <option value="12">12 months</option>
+              <option value="18">18 months</option>
+              <option value="24">24 months</option>
+              <option value="36">36 months</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row cols-2">
+          <div>
+            <label>Purpose of Loan <span class="req">*</span></label>
+            <select id="loan-purpose">
+              <option value="">Select purpose</option>
+              <option>Working Capital / Business Expansion</option>
+              <option>Equipment / Machinery Purchase</option>
+              <option>Stock / Inventory Purchase</option>
+              <option>School Fees / Education</option>
+              <option>Medical / Healthcare</option>
+              <option>Home Renovation</option>
+              <option>Vehicle Purchase</option>
+              <option>Personal / Emergency</option>
+              <option>Salary Advance</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label>Loan Type <span class="req">*</span></label>
+            <select id="loan-type">
+              <option>Cash Loan</option>
+              <option>Revolving Credit</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- DSR indicator -->
+        <div id="dsr-card" style="display:none;background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:24px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase">Estimated Repayment Overview</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Monthly Repayment</div>
+              <div style="font-size:18px;font-weight:600;color:var(--text-primary)" id="dsr-monthly">—</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Total Repayable</div>
+              <div style="font-size:18px;font-weight:600;color:var(--text-primary)" id="dsr-total">—</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Debt-Service Ratio</div>
+              <div style="font-size:18px;font-weight:600" id="dsr-ratio">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Brief Description of Loan Purpose</label>
+          <textarea id="loan-desc" placeholder="Briefly describe what the funds will be used for and how repayment will be made. e.g. Purchase of 50 bags of rice for resale at Balogun Market..."></textarea>
+        </div>
+
+        <div class="field-row cols-2">
+          <div>
+            <label>Collateral / Asset Value (₦)</label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">₦</span>
+              <input type="number" id="collateral" placeholder="0.00" min="0">
+            </div>
+            <div class="input-hint">Leave blank if unsecured application</div>
+          </div>
+          <div>
+            <label>Guarantor Available?</label>
+            <select id="guarantor">
+              <option>No guarantor</option>
+              <option>Yes — guarantor available</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn btn-secondary" onclick="prevStep()">
+            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back
+          </button>
+          <button class="btn btn-primary" onclick="nextStep()">
+            Continue
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ══ STEP 4: DOCUMENTS ══ -->
+      <div class="step-content" id="step-4">
+        <div class="section-eyebrow">Step 4 of 5</div>
+        <h1 class="section-title">Supporting Documents</h1>
+        <p class="section-desc">Upload clear, legible copies of the documents below. All four are required to process your application.</p>
+
+        <div class="callout callout-info">
+          <div class="callout-icon">i</div>
+          <div class="callout-body">
+            <strong>Accepted formats:</strong> PDF, JPG, PNG, JPEG &nbsp;·&nbsp; <strong>Max file size:</strong> 5MB per document.
+            Ensure documents are clear, fully visible, and not expired. Blurred or cropped files will delay processing.
+          </div>
+        </div>
+
+        <div class="docs-grid">
+          <div>
+            <label>Business Registration Certificate <span class="req">*</span></label>
+            <div class="upload-zone" id="zone-biz">
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'biz','Business Reg. Certificate')">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div class="upload-title">Click or drag to upload</div>
+              <div class="upload-sub">CAC Certificate of Incorporation or Business Name</div>
+              <div style="margin-top:8px">
+                <span class="upload-tag">PDF</span>
+                <span class="upload-tag">JPG</span>
+                <span class="upload-tag">PNG</span>
+              </div>
+            </div>
+            <div id="file-biz"></div>
+          </div>
+
+          <div>
+            <label>6 Months Bank Statement <span class="req">*</span></label>
+            <div class="upload-zone" id="zone-bank">
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'bank','Bank Statement')">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              </div>
+              <div class="upload-title">Click or drag to upload</div>
+              <div class="upload-sub">Last 6 consecutive months — stamped by bank</div>
+              <div style="margin-top:8px">
+                <span class="upload-tag">PDF</span>
+                <span class="upload-tag">JPG</span>
+                <span class="upload-tag">PNG</span>
+              </div>
+            </div>
+            <div id="file-bank"></div>
+          </div>
+
+          <div>
+            <label>Tax Identification Number (TIN) <span class="req">*</span></label>
+            <div class="upload-zone" id="zone-tin">
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'tin','TIN Certificate')">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+              <div class="upload-title">Click or drag to upload</div>
+              <div class="upload-sub">FIRS-issued TIN certificate or JTAX card</div>
+              <div style="margin-top:8px">
+                <span class="upload-tag">PDF</span>
+                <span class="upload-tag">JPG</span>
+                <span class="upload-tag">PNG</span>
+              </div>
+            </div>
+            <div id="file-tin"></div>
+          </div>
+
+          <div>
+            <label>Utility Bill / Proof of Address <span class="req">*</span></label>
+            <div class="upload-zone" id="zone-utility">
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'utility','Utility Bill')">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div class="upload-title">Click or drag to upload</div>
+              <div class="upload-sub">NEPA/EKEDC bill, LAWMA, or water bill — not older than 3 months</div>
+              <div style="margin-top:8px">
+                <span class="upload-tag">PDF</span>
+                <span class="upload-tag">JPG</span>
+                <span class="upload-tag">PNG</span>
+              </div>
+            </div>
+            <div id="file-utility"></div>
+          </div>
+        </div>
+
+        <div class="divider"><div class="divider-line"></div><div class="divider-label">Optional but recommended</div><div class="divider-line"></div></div>
+
+        <div class="field-row cols-2">
+          <div>
+            <label>Valid Government ID</label>
+            <div class="upload-zone" style="padding:18px 16px">
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleUpload(this,'id','Govt ID')">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="upload-icon" style="margin:0;flex-shrink:0">
+                  <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
                 </div>
-                <div style="font-size:11px;color:#8BA3BF;margin-top:4px">
-                    Policy: {int(medium_threshold*100)}% / {int(high_threshold*100)}%
+                <div style="text-align:left">
+                  <div class="upload-title" style="font-size:13px">NIN / Passport / Driver's Licence</div>
+                  <div class="upload-sub">Any valid government-issued photo ID</div>
                 </div>
+              </div>
             </div>
-            """, unsafe_allow_html=True)
-
-        with r2:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Default Probability</div>
-                <div style="font-size:36px;font-weight:700;color:{risk_color}">{probability*100:.1f}%</div>
-                <div style="font-size:11px;color:#aaa;margin-top:2px">
-                    Model: {raw_probability*100:.1f}% + context adjustments
+            <div id="file-id"></div>
+          </div>
+          <div>
+            <label>Passport Photograph</label>
+            <div class="upload-zone" style="padding:18px 16px">
+              <input type="file" accept=".jpg,.jpeg,.png" onchange="handleUpload(this,'passport','Passport Photo')">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="upload-icon" style="margin:0;flex-shrink:0">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with r3:
-            ci_color = "#E24B4A" if credit_income > 5 else "#F0A500" if credit_income > 3 else "#1D9E75"
-            st.markdown(f"""
-            <div class="metric-card">
-                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Loan-to-Income Ratio</div>
-                <div style="font-size:36px;font-weight:700;color:{ci_color}">{credit_income:.1f}x</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with r4:
-            bureau_color = "#E24B4A" if ext_avg < 0.35 else "#F0A500" if ext_avg < 0.55 else "#1D9E75"
-            st.markdown(f"""
-            <div class="metric-card">
-                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Avg Credit Bureau Score</div>
-                <div style="font-size:36px;font-weight:700;color:{bureau_color}">{ext_avg:.2f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # ── INSIGHT BOX ───────────────────────
-        delinquency_note = ""
-        if delinquency_recency == "Within the last 2 years":
-            delinquency_note = " Recent default history within 2 years is a significant red flag and has been factored into this score."
-        elif delinquency_recency == "2 to 5 years ago":
-            delinquency_note = " A prior default 2-5 years ago has been noted and moderately weighted."
-
-        active_loan_note = f" Borrower currently holds {active_loans} active loan obligation(s)." if active_loans > 0 else ""
-        income_note = f" Income is {income_type.lower()}, which carries {'higher' if income_type in ['Irregular / Seasonal', 'Commission-Based'] else 'standard'} repayment variability."
-
-        if probability >= high_threshold:
-            insight = (
-                f"⚠️ This application carries significant default risk.{delinquency_note}{active_loan_note}{income_note} "
-                "The credit bureau profile and debt-to-income ratio suggest this borrower may struggle to meet "
-                "repayment obligations. Recommend decline or referral to credit committee with additional collateral "
-                "or guarantor requirements before consideration."
-            )
-        elif probability >= medium_threshold:
-            insight = (
-                f"⚡ This application shows moderate risk indicators.{delinquency_note}{active_loan_note}{income_note} "
-                "Consider requesting additional documentation — 6 months bank statement, business registration, "
-                "or a credible guarantor. Loan restructuring to reduce monthly repayment burden may bring this "
-                "within acceptable risk bounds."
-            )
-        else:
-            insight = (
-                f"✅ This application presents a low default risk profile.{active_loan_note}{income_note} "
-                "Credit bureau history and debt-to-income ratio are within acceptable bounds. Recommend standard "
-                "approval process with routine documentation verification — bank statement, means of identification, "
-                "and proof of income."
-            )
-
-        st.markdown(f'<div class="insight-box">{insight}</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="disclaimer-box">'
-            '⚖️ <strong>Reminder:</strong> This score is one input into the credit decision. '
-            'Loan officer assessment of borrower context, market conditions, guarantor quality, '
-            'and business viability must inform the final decision.'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        # ── SHAP CHART ────────────────────────
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="section-header">Why did the model give this score?</div>', unsafe_allow_html=True)
-        st.markdown("The chart below shows which factors pushed the risk score **up** 🔴 or **down** 🔵 for this borrower.")
-
-        with st.spinner("Generating credit risk explanation..."):
-            try:
-                explainer = shap.TreeExplainer(model)
-                shap_vals = explainer.shap_values(input_df)
-                shap_series = pd.Series(shap_vals[0], index=feature_names).abs().sort_values(ascending=False).head(12)
-                top_features = shap_series.index.tolist()
-                top_shap = pd.Series(shap_vals[0], index=feature_names)[top_features]
-                top_labels = [get_label(f) for f in top_features]
-                colors = ['#E24B4A' if v > 0 else '#2E75B6' for v in top_shap.values]
-                fig, ax = plt.subplots(figsize=(10, 6))
-                ax.barh(top_labels[::-1], top_shap.values[::-1], color=colors[::-1], edgecolor='none', height=0.6)
-                ax.axvline(x=0, color='#333333', linewidth=0.8)
-                ax.set_xlabel('Impact on Default Probability', fontsize=11)
-                ax.set_title(
-                    'Credit Risk Drivers — Why This Borrower Was Scored This Way\n'
-                    '🔴 Red = increases default risk  |  🔵 Blue = reduces default risk',
-                    fontsize=11, fontweight='bold', pad=14
-                )
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False)
-                ax.tick_params(axis='y', labelsize=10)
-                fig.patch.set_facecolor('#FFFFFF')
-                ax.set_facecolor('#FAFAFA')
-                plt.tight_layout()
-                st.pyplot(fig)
-                plt.close()
-            except Exception as e:
-                st.warning(f"SHAP explanation could not be generated: {e}")
-
-        # ── KEY RISK FACTORS ──────────────────
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="section-header">Key Risk Factors</div>', unsafe_allow_html=True)
-
-        f1, f2, f3, f4 = st.columns(4)
-
-        with f1:
-            bureau_status = (
-                "🔴 Weak — High Risk" if ext_avg < 0.35 else
-                "🟡 Moderate — Review" if ext_avg < 0.55 else
-                "🟢 Strong — Low Risk"
-            )
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:16px;
-                        border-left:4px solid #2E75B6;box-shadow:0 0 20px rgba(0,212,255,0.08)">
-                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Credit Bureau History</div>
-                <div style="font-size:24px;font-weight:700;color:#F0F6FF">{ext_avg:.2f} / 1.00</div>
-                <div style="font-size:13px;color:#C8D8E8;margin-top:6px">{bureau_status}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with f2:
-            debt_color = "#E24B4A" if credit_income > 5 else "#F0A500" if credit_income > 3 else "#1D9E75"
-            debt_status = (
-                "🔴 Very High — Decline Risk" if credit_income > 5 else
-                "🟡 Elevated — Review" if credit_income > 3 else
-                "🟢 Manageable — Acceptable"
-            )
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:16px;
-                        border-left:4px solid {debt_color};box-shadow:0 0 20px rgba(0,212,255,0.08)">
-                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Loan-to-Income Ratio</div>
-                <div style="font-size:24px;font-weight:700;color:{debt_color}">{credit_income:.1f}x annual income</div>
-                <div style="font-size:13px;color:#C8D8E8;margin-top:6px">{debt_status}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with f3:
-            emp_color = "#E24B4A" if employment_years < 1 else "#F0A500" if employment_years < 3 else "#1D9E75"
-            employ_status = (
-                "🔴 Unstable — No Employment" if employment_years < 1 else
-                "🟡 Early Stage — Less than 3yrs" if employment_years < 3 else
-                "🟢 Stable — 3+ Years"
-            )
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:16px;
-                        border-left:4px solid {emp_color};box-shadow:0 0 20px rgba(0,212,255,0.08)">
-                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Employment Stability</div>
-                <div style="font-size:24px;font-weight:700;color:{emp_color}">{employment_years} yrs — {income_type}</div>
-                <div style="font-size:13px;color:#C8D8E8;margin-top:6px">{employ_status}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with f4:
-            delinq_color = (
-                "#1D9E75" if delinquency_recency == "Never" else
-                "#F0A500" if delinquency_recency in ["5+ years ago", "2 to 5 years ago"] else
-                "#E24B4A"
-            )
-            delinq_status = (
-                "🟢 Clean Record" if delinquency_recency == "Never" else
-                "🟡 Historical — Low Weight" if delinquency_recency == "5+ years ago" else
-                "🟡 Notable — Moderate Weight" if delinquency_recency == "2 to 5 years ago" else
-                "🔴 Recent — High Weight"
-            )
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:16px;
-                        border-left:4px solid {delinq_color};box-shadow:0 0 20px rgba(0,212,255,0.08)">
-                <div style="font-size:12px;color:#8BA3BF;margin-bottom:4px">Default History</div>
-                <div style="font-size:18px;font-weight:700;color:{delinq_color}">{delinquency_recency}</div>
-                <div style="font-size:13px;color:#C8D8E8;margin-top:6px">{delinq_status}</div>
-                <div style="font-size:12px;color:#8BA3BF;margin-top:4px">{active_loans} active loan(s)</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        # ── RECOMMENDATION ────────────────────
-        st.markdown("---")
-        st.markdown('<div class="section-header">Credit Officer Recommendation</div>', unsafe_allow_html=True)
-
-        rec_col1, rec_col2 = st.columns(2)
-
-        with rec_col1:
-            if probability >= high_threshold:
-                st.markdown(f"""
-                <div style="background:linear-gradient(135deg,rgba(255,69,96,0.1),rgba(255,69,96,0.04));border-radius:10px;padding:18px;border-left:4px solid #FF4560">
-                    <div style="font-size:15px;font-weight:700;color:#E24B4A;margin-bottom:8px">
-                        ❌ Recommendation: DECLINE or REFER
-                    </div>
-                    <div style="font-size:14px;color:#C8D8E8;line-height:1.7">
-                        Default probability exceeds your institution's threshold of {int(high_threshold*100)}%.
-                        If referral is considered, require collateral, guarantor, or significant loan reduction
-                        before re-assessment.<br><br>
-                        <em style="color:#8BA3BF">Credit committee review is recommended before communicating
-                        a final decline to the borrower.</em>
-                    </div>
+                <div style="text-align:left">
+                  <div class="upload-title" style="font-size:13px">Recent passport photograph</div>
+                  <div class="upload-sub">White background, taken within 6 months</div>
                 </div>
-                """, unsafe_allow_html=True)
-            elif probability >= medium_threshold:
-                st.markdown(f"""
-                <div style="background:linear-gradient(135deg,rgba(255,183,0,0.1),rgba(255,183,0,0.04));border-radius:10px;padding:18px;border-left:4px solid #FFB700">
-                    <div style="font-size:15px;font-weight:700;color:#B8860B;margin-bottom:8px">
-                        ⚡ Recommendation: CONDITIONAL APPROVAL
-                    </div>
-                    <div style="font-size:14px;color:#C8D8E8;line-height:1.7">
-                        Score falls within your institution's review band
-                        ({int(medium_threshold*100)}–{int(high_threshold*100)}%).
-                        Consider reducing loan amount, shortening repayment term, or requesting
-                        additional supporting documents before final approval.<br><br>
-                        <em style="color:#8BA3BF">Loan officer judgement is critical at this threshold —
-                        local market knowledge, guarantor assessment, and business site visit
-                        should inform the final decision.</em>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div style="background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(0,229,160,0.04));border-radius:10px;padding:18px;border-left:4px solid #00E5A0">
-                    <div style="font-size:15px;font-weight:700;color:#1D9E75;margin-bottom:8px">
-                        ✅ Recommendation: APPROVE
-                    </div>
-                    <div style="font-size:14px;color:#C8D8E8;line-height:1.7">
-                        Risk profile is within your institution's acceptable threshold of
-                        {int(medium_threshold*100)}%.
-                        Proceed with standard loan processing and documentation verification.<br><br>
-                        <em style="color:#8BA3BF">Loan officer should verify income source, confirm
-                        documentation, and apply institutional credit policy before final approval.</em>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-        with rec_col2:
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#0F1F3D,#0A1628);border-radius:10px;padding:18px;
-                        border:1px solid rgba(0,212,255,0.15);box-shadow:0 0 20px rgba(0,212,255,0.08)">
-                <div style="font-size:11px;font-weight:700;color:#00D4FF;font-family:Space Mono,monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;
-                            border-bottom:2px solid #2E75B6;padding-bottom:6px">
-                    Summary for Credit File
-                </div>
-                <table style="width:100%;font-size:13px;border-collapse:collapse">
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Borrower Age</td>
-                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">{age} years</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Annual Income</td>
-                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">₦{income:,}</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Loan Requested</td>
-                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">₦{loan_amount:,}</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Monthly Repayment</td>
-                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">₦{annuity:,}</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Employment Sector</td>
-                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">{employment_sector}</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Income Type</td>
-                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">{income_type}</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Default History</td>
-                        <td style="padding:6px 0;font-weight:600;color:{delinq_color};text-align:right">{delinquency_recency}</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Active Loans</td>
-                        <td style="padding:6px 0;font-weight:600;color:#F0F6FF;text-align:right">{active_loans}</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Loan-to-Income</td>
-                        <td style="padding:6px 0;font-weight:600;color:{ci_color};text-align:right">{credit_income:.1f}x</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Avg Bureau Score</td>
-                        <td style="padding:6px 0;font-weight:600;color:{bureau_color};text-align:right">{ext_avg:.2f} / 1.00</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">BVN Verified</td>
-                        <td style="padding:6px 0;font-weight:600;color:{'#1D9E75' if bvn_bureau_verified else '#F0A500'};text-align:right">
-                            {'✅ Yes' if bvn_bureau_verified else '⚠️ No'}
-                        </td>
-                    </tr>
-                    <tr style="border-bottom:1px solid rgba(0,212,255,0.08)">
-                        <td style="padding:6px 0;color:#8BA3BF">Model Score</td>
-                        <td style="padding:6px 0;font-weight:600;color:{risk_color};text-align:right">{probability*100:.1f}% default probability</td>
-                    </tr>
-                    <tr>
-                        <td style="padding:6px 0;color:#8BA3BF">Risk Category</td>
-                        <td style="padding:6px 0;font-weight:700;color:{risk_color};text-align:right">{risk_label}</td>
-                    </tr>
-                </table>
+              </div>
             </div>
-            """, unsafe_allow_html=True)
+            <div id="file-passport"></div>
+          </div>
+        </div>
 
+        <div class="form-nav">
+          <button class="btn btn-secondary" onclick="prevStep()">
+            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back
+          </button>
+          <button class="btn btn-primary" onclick="nextStep()">
+            Continue
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
 
-# ─────────────────────────────────────────
-# FOOTER
-# ─────────────────────────────────────────
-st.markdown("""
-<div class="footer">
-    Built by <strong>Nkpo-ikana Udom</strong> —
-    Operations & Strategy | Fintech & Credit Risk |
-    <a href='https://www.linkedin.com/in/nkpo-ikana-udom-479ba91a9/' target='_blank'>LinkedIn</a> ·
-    <a href='https://github.com/stephenudom' target='_blank'>GitHub</a><br>
-    Trained on 1,600,000 loan applications · XGBoost · SHAP Explainability ·
-    Gender-Neutral · CBN Fair Lending Compliant · Full Nigerian Market Range ·
-    Adjustable Risk Thresholds · BVN-Ready · Dual Interface
-</div>
-""", unsafe_allow_html=True)
+      <!-- ══ STEP 5: BVN & REVIEW ══ -->
+      <div class="step-content" id="step-5">
+        <div class="section-eyebrow">Step 5 of 5</div>
+        <h1 class="section-title">BVN Verification & Review</h1>
+        <p class="section-desc">Enter your BVN for identity verification, then review your application before final submission.</p>
+
+        <!-- BVN -->
+        <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-xl);padding:28px;margin-bottom:32px;box-shadow:var(--shadow-sm)">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+            <div style="width:40px;height:40px;background:var(--teal-pale);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg style="width:20px;height:20px;stroke:var(--teal);fill:none;stroke-width:1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary)">Bank Verification Number (BVN)</div>
+              <div style="font-size:12px;color:var(--text-muted)">Required for identity verification — soft enquiry only</div>
+            </div>
+          </div>
+
+          <div class="field-row cols-2">
+            <div>
+              <label>Your BVN <span class="req">*</span></label>
+              <div class="bvn-wrap">
+                <input type="text" id="bvn" placeholder="11-digit BVN" maxlength="11" oninput="validateBVN()">
+                <span class="bvn-status" id="bvn-status"></span>
+              </div>
+              <div class="input-hint">Dial *565*0# on your registered phone to retrieve your BVN</div>
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <div style="background:var(--off-white);border-radius:var(--radius);padding:14px 16px;font-size:13px;color:var(--text-secondary);line-height:1.6;width:100%">
+                Your BVN is encrypted in transit. It will only be used for credit bureau verification and will not be stored beyond this application.
+              </div>
+            </div>
+          </div>
+
+          <label class="checkbox-row" style="margin-top:8px">
+            <input type="checkbox" id="bvn-consent">
+            <div class="checkbox-text">
+              I consent to my BVN being used to retrieve my credit bureau data for the purpose of this loan application.
+              <small>This is a soft enquiry and will not negatively affect my credit score.</small>
+            </div>
+          </label>
+        </div>
+
+        <!-- Review summary -->
+        <div style="font-size:13px;font-weight:600;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:16px">Application Summary</div>
+
+        <div class="review-block">
+          <div class="review-block-header">
+            <div class="review-block-title">Personal Information</div>
+            <button class="review-edit" onclick="goTo(1)">Edit</button>
+          </div>
+          <div class="review-block-body">
+            <div class="review-row"><div class="review-key">Full Name</div><div class="review-val" id="rv-name">—</div></div>
+            <div class="review-row"><div class="review-key">Phone</div><div class="review-val" id="rv-phone">—</div></div>
+            <div class="review-row"><div class="review-key">Email</div><div class="review-val" id="rv-email">—</div></div>
+            <div class="review-row"><div class="review-key">State</div><div class="review-val" id="rv-state">—</div></div>
+          </div>
+        </div>
+
+        <div class="review-block">
+          <div class="review-block-header">
+            <div class="review-block-title">Employment & Income</div>
+            <button class="review-edit" onclick="goTo(2)">Edit</button>
+          </div>
+          <div class="review-block-body">
+            <div class="review-row"><div class="review-key">Status</div><div class="review-val" id="rv-emp">—</div></div>
+            <div class="review-row"><div class="review-key">Sector</div><div class="review-val" id="rv-sector">—</div></div>
+            <div class="review-row"><div class="review-key">Monthly Net Income</div><div class="review-val" id="rv-income">—</div></div>
+            <div class="review-row"><div class="review-key">Default History</div><div class="review-val" id="rv-default">—</div></div>
+          </div>
+        </div>
+
+        <div class="review-block">
+          <div class="review-block-header">
+            <div class="review-block-title">Loan Request</div>
+            <button class="review-edit" onclick="goTo(3)">Edit</button>
+          </div>
+          <div class="review-block-body">
+            <div class="review-row"><div class="review-key">Amount Requested</div><div class="review-val" id="rv-amount">—</div></div>
+            <div class="review-row"><div class="review-key">Tenure</div><div class="review-val" id="rv-tenure">—</div></div>
+            <div class="review-row"><div class="review-key">Purpose</div><div class="review-val" id="rv-purpose">—</div></div>
+            <div class="review-row"><div class="review-key">Monthly Repayment (est.)</div><div class="review-val" id="rv-repay">—</div></div>
+          </div>
+        </div>
+
+        <div class="review-block">
+          <div class="review-block-header">
+            <div class="review-block-title">Documents Submitted</div>
+            <button class="review-edit" onclick="goTo(4)">Edit</button>
+          </div>
+          <div class="review-block-body">
+            <div class="review-row">
+              <div class="review-key">Business Registration</div>
+              <div class="review-val" id="rv-biz">—</div>
+            </div>
+            <div class="review-row">
+              <div class="review-key">Bank Statement</div>
+              <div class="review-val" id="rv-bank">—</div>
+            </div>
+            <div class="review-row">
+              <div class="review-key">TIN Certificate</div>
+              <div class="review-val" id="rv-tin">—</div>
+            </div>
+            <div class="review-row">
+              <div class="review-key">Utility Bill</div>
+              <div class="review-val" id="rv-util">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Declaration -->
+        <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;margin-top:24px;box-shadow:var(--shadow-sm)">
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:14px">Declaration</div>
+          <label class="checkbox-row">
+            <input type="checkbox" id="declare-1">
+            <div class="checkbox-text">
+              I confirm that all information provided in this application is true, accurate, and complete to the best of my knowledge.
+              <small>Providing false information is a criminal offence under Nigerian law.</small>
+            </div>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="declare-2">
+            <div class="checkbox-text">
+              I authorise Joyful Smile Nigeria Limited to verify my information through relevant databases, registries, and credit bureaus.
+              <small>In line with the Nigeria Data Protection Regulation (NDPR) 2019.</small>
+            </div>
+          </label>
+          <label class="checkbox-row" style="margin-bottom:0">
+            <input type="checkbox" id="declare-3">
+            <div class="checkbox-text">
+              I have read and I agree to the Terms & Conditions and Privacy Policy of Joyful Smile Nigeria Limited.
+            </div>
+          </label>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn btn-secondary" onclick="prevStep()">
+            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back
+          </button>
+          <button class="btn btn-primary" onclick="submitApp()" style="padding:0 40px;background:var(--navy)">
+            Submit Application
+            <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /form-area -->
+
+    <!-- ══ SUCCESS SCREEN ══ -->
+    <div class="success-screen" id="success-screen">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--navy);margin-bottom:8px">
+        Application Submitted
+      </div>
+      <p style="font-size:15px;color:var(--text-secondary);margin-bottom:4px">Your reference number</p>
+      <div class="success-ref" id="ref-number">JSN-000000</div>
+      <p class="success-note">
+        Your loan application has been received. Our team will review your documents and contact you within <strong>24 to 48 business hours</strong>.
+      </p>
+      <div class="success-steps">
+        <div class="success-step">
+          <div class="success-step-num">01 — Received</div>
+          <div class="success-step-text">Your application is in our review queue</div>
+        </div>
+        <div class="success-step">
+          <div class="success-step-num">02 — Review</div>
+          <div class="success-step-text">Documents and credit check within 24–48 hrs</div>
+        </div>
+        <div class="success-step">
+          <div class="success-step-num">03 — Decision</div>
+          <div class="success-step-text">You will be contacted with our decision</div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:8px">
+        Questions? Call <strong style="color:var(--teal)">07010057527</strong> or email <strong style="color:var(--teal)">joyfulsmilesnigerialimited@gmail.com</strong>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script>
+let currentStep = 1;
+const totalSteps = 5;
+const uploadedFiles = {};
+
+const stepNames = ['Personal Details','Employment & Income','Loan Request','Documents','BVN & Review'];
+const progressPct = [20,40,60,80,100];
+
+function goTo(n){
+  document.getElementById('step-'+currentStep).classList.remove('active');
+  document.querySelectorAll('.step-item')[currentStep-1].classList.remove('active');
+  if(n > currentStep) document.querySelectorAll('.step-item')[currentStep-1].classList.add('completed');
+  currentStep = n;
+  document.getElementById('step-'+currentStep).classList.add('active');
+  document.querySelectorAll('.step-item')[currentStep-1].classList.remove('completed');
+  document.querySelectorAll('.step-item')[currentStep-1].classList.add('active');
+  document.getElementById('top-step-name').textContent = stepNames[n-1];
+  document.getElementById('progress-fill').style.width = progressPct[n-1]+'%';
+  document.getElementById('progress-label').textContent = 'Step '+n+' of '+totalSteps;
+  if(n===5) populateReview();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function nextStep(){ if(currentStep < totalSteps) goTo(currentStep+1); }
+function prevStep(){ if(currentStep > 1) goTo(currentStep-1); }
+
+function validateBVN(){
+  const v = document.getElementById('bvn').value;
+  const s = document.getElementById('bvn-status');
+  if(v.length===11 && /^\d+$/.test(v)){s.textContent='✓ Valid';s.className='bvn-status bvn-ok';}
+  else if(v.length>0){s.textContent='11 digits required';s.className='bvn-status bvn-err';}
+  else{s.textContent='';s.className='bvn-status';}
+}
+
+function handleUpload(input, key, label){
+  const file = input.files[0];
+  if(!file) return;
+  uploadedFiles[key] = {name:file.name, file:file};
+  const container = document.getElementById('file-'+key);
+  container.innerHTML = `
+    <div class="file-uploaded">
+      <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+      <span class="file-uploaded-name">${file.name}</span>
+      <button class="file-remove" onclick="removeFile('${key}','${label}')">×</button>
+    </div>`;
+  document.getElementById('zone-'+key)?.classList.add('uploaded');
+}
+
+function removeFile(key){
+  delete uploadedFiles[key];
+  document.getElementById('file-'+key).innerHTML='';
+}
+
+function fmt(n){ return '₦'+Number(n).toLocaleString('en-NG'); }
+
+function updateDSR(){
+  const amt = parseFloat(document.getElementById('loan-amount').value)||0;
+  const tenure = parseInt(document.getElementById('loan-tenure').value)||0;
+  const income = parseFloat(document.getElementById('monthly-income').value)||0;
+  const card = document.getElementById('dsr-card');
+  if(amt>0 && tenure>0){
+    card.style.display='block';
+    const monthly = amt/tenure;
+    const total = monthly*tenure;
+    const dsr = income>0 ? (monthly/income*100) : null;
+    document.getElementById('dsr-monthly').textContent = fmt(monthly.toFixed(0));
+    document.getElementById('dsr-total').textContent = fmt(total.toFixed(0));
+    const ratioEl = document.getElementById('dsr-ratio');
+    if(dsr!==null){
+      ratioEl.textContent = dsr.toFixed(1)+'%';
+      ratioEl.style.color = dsr>50?'#C0392B':dsr>35?'#8B5E00':'#0F7B6C';
+    } else {
+      ratioEl.textContent='—';ratioEl.style.color='var(--text-primary)';
+    }
+  } else { card.style.display='none'; }
+}
+
+function docBadge(key){
+  if(uploadedFiles[key]) return `<span class="review-badge badge-ok">✓ Uploaded</span>`;
+  return `<span class="review-badge badge-missing">Not uploaded</span>`;
+}
+
+function populateReview(){
+  const fn = document.getElementById('first-name').value;
+  const ln = document.getElementById('last-name').value;
+  document.getElementById('rv-name').textContent = [fn,ln].filter(Boolean).join(' ')||'—';
+  document.getElementById('rv-phone').textContent = document.getElementById('phone').value||'—';
+  document.getElementById('rv-email').textContent = document.getElementById('email').value||'—';
+  document.getElementById('rv-state').textContent = document.getElementById('state').value||'—';
+  document.getElementById('rv-emp').textContent = document.getElementById('emp-status').value||'—';
+  document.getElementById('rv-sector').textContent = document.getElementById('emp-sector').value||'—';
+  const inc = document.getElementById('monthly-income').value;
+  document.getElementById('rv-income').textContent = inc ? fmt(inc) : '—';
+  document.getElementById('rv-default').textContent = document.getElementById('default-history').value||'—';
+  const lamt = document.getElementById('loan-amount').value;
+  document.getElementById('rv-amount').textContent = lamt ? fmt(lamt) : '—';
+  const ten = document.getElementById('loan-tenure').value;
+  document.getElementById('rv-tenure').textContent = ten ? ten+' months' : '—';
+  document.getElementById('rv-purpose').textContent = document.getElementById('loan-purpose').value||'—';
+  if(lamt && ten){ document.getElementById('rv-repay').textContent = fmt((lamt/ten).toFixed(0))+' / month'; }
+  document.getElementById('rv-biz').innerHTML = docBadge('biz');
+  document.getElementById('rv-bank').innerHTML = docBadge('bank');
+  document.getElementById('rv-tin').innerHTML = docBadge('tin');
+  document.getElementById('rv-util').innerHTML = docBadge('utility');
+}
+
+function submitApp(){
+  const d1=document.getElementById('declare-1').checked;
+  const d2=document.getElementById('declare-2').checked;
+  const d3=document.getElementById('declare-3').checked;
+  const bvnOk=document.getElementById('bvn-status').classList.contains('bvn-ok');
+  const consent=document.getElementById('bvn-consent').checked;
+  if(!d1||!d2||!d3){alert('Please confirm all three declaration checkboxes before submitting.');return;}
+  if(!bvnOk){alert('Please enter a valid 11-digit BVN before submitting.');return;}
+  if(!consent){alert('Please provide consent for BVN verification.');return;}
+  const ref = 'JSN-'+Math.random().toString().slice(2,8).toUpperCase();
+  document.getElementById('ref-number').textContent = ref;
+  document.querySelector('.main-content .form-area').style.display='none';
+  document.querySelector('.top-bar').style.display='none';
+  document.getElementById('success-screen').style.display='flex';
+  document.querySelectorAll('.step-item').forEach(s=>s.classList.add('completed'));
+}
+
+function toggleEmpFields(){
+  const v=document.getElementById('emp-status').value;
+  const show=!v.includes('Unemployed')&&!v.includes('Retired');
+  document.getElementById('employer-fields').style.opacity=show?'1':'0.4';
+}
+</script>
+</body>
+</html>
