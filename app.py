@@ -1189,5 +1189,3 @@ elif st.session_state.mode == "officer":
                     st.session_state.applications = apps
                     st.error(f"Application {a['ref']} declined.")
                     st.rerun()
-</div>
-""", unsafe_allow_html=True)
