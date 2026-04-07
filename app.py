@@ -32,10 +32,11 @@ st.markdown("""
 }
 
 /* ── HIDE STREAMLIT CHROME ── */
-#MainMenu,footer,header{visibility:hidden}
-.block-container{padding:0!important;max-width:100%!important}
+#MainMenu,footer{visibility:hidden}
+header{visibility:hidden;height:0}
+.block-container{padding-top:0!important;padding-left:0!important;padding-right:0!important;max-width:100%!important}
 section[data-testid="stSidebar"]{display:none!important}
-[data-testid="stAppViewContainer"]{background:var(--off-white)!important}
+.main .block-container{background:var(--off-white)}
 
 /* ── BODY ── */
 body,html,[class*="css"]{font-family:'DM Sans',sans-serif!important;color:var(--text-primary)!important}
@@ -464,43 +465,56 @@ def show_errors(errors):
 # MODE: GATE
 # ─────────────────────────────────────────────────────────────
 if st.session_state.mode == "gate":
+    # Gate screen header
     st.markdown("""
-    <div class="gate-wrap">
-      <div class="gate-brand">Joyful<span>Smiles</span></div>
-      <div class="gate-tagline">Confidence reassured...</div>
-      <div class="gate-rc">RC No. 8967399 &nbsp;·&nbsp; 5, Shosanya Close, Aboru, Iyana Ipaja, Lagos State</div>
-      <div class="gate-cards">
-        <div class="gate-card">
-          <div class="gate-card-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B8A8" stroke-width="1.8">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-            </svg>
+    <div style="background:#0B1F3A;min-height:100vh;display:flex;flex-direction:column;
+                align-items:center;justify-content:center;padding:60px 20px;margin:-1rem -1rem 0 -1rem;
+                text-align:center">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:600;
+                  color:#fff;margin-bottom:6px;letter-spacing:-0.01em">
+        Joyful<span style="color:#00B8A8">Smiles</span>
+      </div>
+      <div style="font-family:'Cormorant Garamond',serif;font-style:italic;
+                  font-size:18px;color:rgba(255,255,255,0.4);margin-bottom:8px">
+        Confidence reassured...
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.2);letter-spacing:0.1em;
+                  text-transform:uppercase;margin-bottom:52px">
+        RC No. 8967399 &nbsp;·&nbsp; 5, Shosanya Close, Aboru, Iyana Ipaja, Lagos State
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:48px">
+        <div style="width:260px;background:rgba(255,255,255,0.04);border:1px solid rgba(0,155,141,0.22);
+                    border-radius:16px;padding:32px 28px;text-align:left">
+          <div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:8px">Loan Applicant</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.7;margin-bottom:16px">
+            Apply for a business or personal loan. Complete the guided 5-step form and submit your documents securely.
           </div>
-          <div class="gate-card-title">Loan Applicant</div>
-          <div class="gate-card-desc">Apply for a business or personal loan. Complete the guided 5-step form and submit your documents securely.</div>
-          <div class="gate-card-arrow">▶ Apply Now</div>
+          <div style="font-size:11px;color:#00B8A8;font-weight:600;letter-spacing:0.06em;text-transform:uppercase">
+            ▶ Click Apply below
+          </div>
         </div>
-        <div class="gate-card" style="margin-left:4px">
-          <div class="gate-card-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B8A8" stroke-width="1.8">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-            </svg>
+        <div style="width:260px;background:rgba(255,255,255,0.04);border:1px solid rgba(0,155,141,0.22);
+                    border-radius:16px;padding:32px 28px;text-align:left">
+          <div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:8px">Loan Officer</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.7;margin-bottom:16px">
+            Review submitted applications, download documents, and make credit decisions from the officer dashboard.
           </div>
-          <div class="gate-card-title">Loan Officer</div>
-          <div class="gate-card-desc">Review submitted applications, download documents, and make credit decisions from the officer dashboard.</div>
-          <div class="gate-card-arrow">▶ Officer Login</div>
+          <div style="font-size:11px;color:#00B8A8;font-weight:600;letter-spacing:0.06em;text-transform:uppercase">
+            ▶ Click Officer Login below
+          </div>
         </div>
       </div>
     </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3, col4, col5 = st.columns([2, 1, 0.5, 1, 2])
-    with col2:
-        if st.button("Apply for a Loan", use_container_width=True):
+    # Buttons rendered OUTSIDE the HTML block so Streamlit can handle them
+    _, col_a, col_gap, col_o, _ = st.columns([2, 1.2, 0.3, 1.2, 2])
+    with col_a:
+        if st.button("🏦 Apply for a Loan", use_container_width=True, key="gate_apply"):
             st.session_state.mode = "applicant"
             st.rerun()
-    with col4:
-        if st.button("Officer Login", use_container_width=True):
+    with col_o:
+        if st.button("🔐 Officer Login", use_container_width=True, key="gate_officer"):
             st.session_state.mode = "officer_login"
             st.rerun()
 
